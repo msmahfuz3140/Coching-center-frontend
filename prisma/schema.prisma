@@ -10,18 +10,31 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id            String   @id @default(cuid()) @map("_id")
-  email         String   @unique
-  name          String?
-  emailVerified Boolean  @default(false)
-  image         String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  role          Role     @default(STUDENT)
+enum Role {
+  ADMIN
+  STUDENT
+}
 
-  sessions Session[]
-  accounts Account[]
+// ─── Auth Models (Better Auth) ───
+
+model User {
+  id            String      @id @default(cuid()) @map("_id")
+  email         String      @unique
+  name          String?
+  emailVerified Boolean     @default(false)
+  image         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  role          Role        @default(STUDENT)
+  phone         String?
+
+  sessions      Session[]
+  accounts      Account[]
+
+  // LMS Relations
+  enrollments   Enrollment[]
+  createdCourses Course[]   @relation("CourseInstructor")
+  notices       Notice[]
 
   @@map("user")
 }
@@ -41,18 +54,18 @@ model Session {
 }
 
 model Account {
-  id                    String    @id @default(cuid()) @map("_id")
-  accountId             String
-  providerId            String
-  userId                String
-  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  accessToken           String?
-  refreshToken          String?
-  idToken               String?
-  expiresAt             DateTime?
-  password              String?
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  id           String    @id @default(cuid()) @map("_id")
+  accountId    String
+  providerId   String
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken  String?
+  refreshToken String?
+  idToken      String?
+  expiresAt    DateTime?
+  password     String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   @@map("account")
 }
@@ -66,7 +79,81 @@ model Verification {
   @@map("verification")
 }
 
-enum Role {
-  ADMIN
-  STUDENT
+// ─── LMS Models ───
+
+model Course {
+  id          String       @id @default(cuid()) @map("_id")
+  title       String
+  description String?
+  thumbnail   String?
+  price       Float        @default(0)
+  isPublished Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Instructor (Admin who created the course)
+  instructorId String
+  instructor   User         @relation("CourseInstructor", fields: [instructorId], references: [id], onDelete: Cascade)
+
+  // Category / Tags
+  category    String?
+  tags        String[]
+
+  // Relations
+  videos      Video[]
+  enrollments Enrollment[]
+  notices     Notice[]
+
+  @@map("course")
+}
+
+model Video {
+  id          String   @id @default(cuid()) @map("_id")
+  title       String
+  description String?
+  youtubeUrl  String
+  duration    Int?     // duration in seconds
+  orderIndex  Int      @default(0)
+  isFree      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@map("video")
+}
+
+model Enrollment {
+  id          String   @id @default(cuid()) @map("_id")
+  enrolledAt  DateTime @default(now())
+  completedAt DateTime?
+  progress    Float    @default(0) // 0.0 to 100.0
+
+  // Relations
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@map("enrollment")
+}
+
+model Notice {
+  id        String   @id @default(cuid()) @map("_id")
+  title     String
+  content   String
+  priority  String   @default("normal") // low, normal, high, urgent
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@map("notice")
 }

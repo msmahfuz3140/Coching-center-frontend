@@ -26,7 +26,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       <body className="min-h-full flex flex-col">
         <Navbar />
-        {children}
+        <main className="flex-1 pt-20">
+          {children}
+        </main>
         <Toaster position="top-right" />
       </body>
     </html>
