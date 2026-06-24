@@ -61,6 +61,7 @@ export default function Navbar() {
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-1">
             <NavLink href="/">Home</NavLink>
+            <NavLink href="/courses">Courses</NavLink>
             <NavLink href="/features">Features</NavLink>
             <NavLink href="/about">About</NavLink>
           </div>
@@ -131,12 +132,13 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Menu */}
-      <div className={`md:hidden transition-all duration-300 overflow-hidden ${isMenuOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
-        <div className="px-4 py-4 space-y-2 bg-white border-t border-gray-100">
-          <MobileNavLink href="/" onClick={() => setIsMenuOpen(false)}>Home</MobileNavLink>
-          <MobileNavLink href="/features" onClick={() => setIsMenuOpen(false)}>Features</MobileNavLink>
-          <MobileNavLink href="/about" onClick={() => setIsMenuOpen(false)}>About</MobileNavLink>
+          {/* Mobile Menu */}
+        <div className={`md:hidden transition-all duration-300 overflow-hidden ${isMenuOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
+          <div className="px-4 py-4 space-y-2 bg-white border-t border-gray-100">
+            <MobileNavLink href="/" onClick={() => setIsMenuOpen(false)}>Home</MobileNavLink>
+            <MobileNavLink href="/courses" onClick={() => setIsMenuOpen(false)}>Courses</MobileNavLink>
+            <MobileNavLink href="/features" onClick={() => setIsMenuOpen(false)}>Features</MobileNavLink>
+            <MobileNavLink href="/about" onClick={() => setIsMenuOpen(false)}>About</MobileNavLink>
           <div className="pt-4 border-t border-gray-100 space-y-2">
             {isLoggedIn ? (
               <>
