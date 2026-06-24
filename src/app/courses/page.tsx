@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { courseAPI } from '@/lib/courseAPI'
+import { authClient } from '@/lib/auth-client'
 import toast from 'react-hot-toast'
 
 const CATEGORIES = [
@@ -26,12 +27,24 @@ interface Course {
 
 export default function CoursesPage() {
   const [courses, setCourses] = useState<Course[]>([])
+  const [session, setSession] = useState<any>(null)
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [processing, setProcessing] = useState<string | null>(null)
 
   useEffect(() => {
     fetchCourses()
+    loadSession()
   }, [selectedCategory])
+
+  const loadSession = async () => {
+    try {
+      const { data } = await authClient.getSession()
+      setSession(data)
+    } catch (error) {
+      setSession(null)
+    }
+  }
 
   const fetchCourses = async () => {
     try {
@@ -101,31 +114,54 @@ export default function CoursesPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {courses.map((course) => (
-              <Link
+              <div
                 key={course._id}
-                href={`/courses/${course.slug}`}
-                className="bg-white rounded-lg shadow-md hover:shadow-lg transition p-6 block"
+                className="bg-white rounded-lg shadow-md hover:shadow-lg transition p-6"
               >
-                <div className="mb-4">
+                <div className="mb-4 flex items-center justify-between">
                   <span className="inline-block px-3 py-1 bg-blue-100 text-blue-700 text-sm rounded-full font-medium">
                     {course.category}
                   </span>
+                  <div className="text-sm text-gray-500">{course.instructor || 'Instructor TBA'}</div>
                 </div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">{course.title}</h3>
-                {course.instructor && (
-                  <p className="text-sm text-gray-600 mb-3">
-                    <span className="font-medium">Instructor:</span> {course.instructor}
-                  </p>
-                )}
                 {course.description && (
                   <p className="text-gray-600 text-sm mb-4 line-clamp-2">
                     {course.description}
                   </p>
                 )}
-                <div className="text-blue-600 font-medium hover:text-blue-700">
-                  View Course →
+
+                <div className="mt-4 flex items-center justify-between">
+                  <Link href={`/courses/${course.slug}`} className="text-blue-600 font-medium hover:text-blue-700">
+                    View Course →
+                  </Link>
+
+                  <button
+                    onClick={async (e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      if (processing) return
+                      try {
+                        if (!session || !session.token) {
+                          toast.error('Please login to request enrollment')
+                          return
+                        }
+                        setProcessing(course._id)
+                        await courseAPI.requestCourseAccess(course.slug, session.token, 'Requesting access from listing')
+                        toast.success('Enrollment request sent')
+                      } catch (err: any) {
+                        toast.error(err?.message || 'Failed to send request')
+                      } finally {
+                        setProcessing(null)
+                      }
+                    }}
+                    disabled={processing === course._id}
+                    className="ml-4 px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 disabled:bg-gray-400 transition"
+                  >
+                    {processing === course._id ? 'Sending...' : 'Enroll'}
+                  </button>
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         )}
