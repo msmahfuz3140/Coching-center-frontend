@@ -13,7 +13,9 @@ type UserRow = {
   role: 'ADMIN' | 'STUDENT'
   emailVerified: boolean
   createdAt: string
+  isBlocked?: boolean
 }
+
 
 export default function AdminUsersPage() {
   const [session, setSession] = useState<any>(null)
@@ -132,17 +134,87 @@ export default function AdminUsersPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${user.emailVerified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                        {user.emailVerified ? 'Verified' : 'Pending'}
-                      </span>
+                      <div className="space-y-1">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${user.emailVerified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                          {user.emailVerified ? 'Verified' : 'Pending'}
+                        </span>
+                        {user.isBlocked && (
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            Blocked
+                          </span>
+                        )}
+                      </div>
                     </td>
+
                     <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const ok = window.confirm('Block this user?')
+                            if (!ok) return
+                            setIsUpdating(user.id)
+                            try {
+                              const res = await fetch('/api/admin/users', {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ userId: user.id, action: 'BLOCK' }),
+                              })
+                              const result = await res.json()
+                              if (!res.ok || !result.success) throw new Error(result.message || 'Failed to block')
+                              setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, isBlocked: true } : u)))
+                              toast.success('User blocked')
+                            } catch (err: any) {
+                              toast.error(err?.message || 'Failed to block')
+                            } finally {
+                              setIsUpdating(null)
+                            }
+                          }}
+                          disabled={isUpdating === user.id}
+                          className="px-3 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:bg-gray-300 disabled:text-gray-600 transition"
+                          aria-label={`Block ${user.email}`}
+                        >
+                          Block
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const ok = window.confirm('Delete this user? This cannot be undone.')
+                            if (!ok) return
+                            setIsUpdating(user.id)
+                            try {
+                              const res = await fetch('/api/admin/users', {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ userId: user.id, action: 'DELETE' }),
+                              })
+                              const result = await res.json()
+                              if (!res.ok || !result.success) throw new Error(result.message || 'Failed to delete')
+                              setUsers((prev) => prev.filter((u) => u.id !== user.id))
+                              toast.success('User deleted')
+                            } catch (err: any) {
+                              toast.error(err?.message || 'Failed to delete')
+                            } finally {
+                              setIsUpdating(null)
+                            }
+                          }}
+                          disabled={isUpdating === user.id}
+                          className="px-3 py-2 text-sm rounded-lg bg-gray-900 text-white hover:bg-black disabled:bg-gray-300 disabled:text-gray-600 transition"
+                          aria-label={`Delete ${user.email}`}
+                        >
+                          Delete
+                        </button>
+                      </div>
+
                       <select
+                        aria-label={`Change role for ${user.email}`}
                         value={user.role}
                         onChange={(e) => handleRoleChange(user.id, e.target.value as 'ADMIN' | 'STUDENT')}
                         disabled={isUpdating === user.id}
-                        className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700"
+                        className="mt-2 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700"
                       >
+
                         <option value="STUDENT">Student</option>
                         <option value="ADMIN">Admin</option>
                       </select>

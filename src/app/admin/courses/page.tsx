@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { authClient } from '@/lib/auth-client'
 import DashboardLayout from '@/components/layout/DashboardLayout'
@@ -81,7 +82,7 @@ export default function AdminCoursesPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     try {
       const url = editingCourse ? `/api/admin/courses/${editingCourse.id}` : '/api/admin/courses'
       const method = editingCourse ? 'PATCH' : 'POST'
@@ -258,7 +259,7 @@ export default function AdminCoursesPage() {
                   </div>
 
                   <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2">{course.title}</h3>
-                  
+
                   {course.description && (
                     <p className="text-gray-600 text-sm mb-4 line-clamp-2">{course.description}</p>
                   )}
@@ -302,6 +303,28 @@ export default function AdminCoursesPage() {
                       {course.price === 0 ? 'Free' : `৳${course.price}`}
                     </span>
                     <div className="flex gap-2">
+                      <Link
+                        href={`/admin/courses/${course.id}/videos`}
+                        className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                        title="Manage Videos"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                      </Link>
+
+                      <Link
+                        href={`/courses/${course.slug}`}
+                        className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                        title="View Course Details"
+                        aria-label={`View course details: ${course.title}`}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      </Link>
+
                       <button
                         onClick={() => handleEdit(course)}
                         className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -321,6 +344,7 @@ export default function AdminCoursesPage() {
                         </svg>
                       </button>
                     </div>
+
                   </div>
                 </div>
               </div>

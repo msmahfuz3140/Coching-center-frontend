@@ -24,6 +24,12 @@ enum CourseCategory {
   REFERRED_BATCH
 }
 
+enum EnrollmentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 // ─── Auth Models (Better Auth) ───
 
 model User {
@@ -171,16 +177,23 @@ model Video {
 }
 
 model Enrollment {
-  id          String   @id @default(cuid()) @map("_id")
-  enrolledAt  DateTime @default(now())
-  completedAt DateTime?
-  progress    Float    @default(0) // 0.0 to 100.0
+  id              String           @id @default(cuid()) @map("_id")
+  enrolledAt      DateTime         @default(now())
+  completedAt     DateTime?
+  progress        Float            @default(0) // 0.0 to 100.0
+
+  // Enrollment request fields
+  status          EnrollmentStatus @default(PENDING)
+  requestMessage  String?          // Message from student when requesting
+  responseMessage String?          // Message from admin when approving/rejecting
+  reviewedBy      String?          // Admin who reviewed the request
+  reviewedAt      DateTime?        // When the request was reviewed
 
   // Relations
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  courseId    String
-  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courseId        String
+  course          Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@unique([userId, courseId])
   @@map("enrollment")

@@ -5,13 +5,15 @@ import { prisma } from '@/lib/prisma'
 // GET /api/courses - Get all published courses (public)
 export async function GET(request: Request) {
   try {
-    const session = await auth.api.getSession({ 
-      headers: request.headers 
+    const session = await auth.api.getSession({
+      headers: request.headers
     })
 
     const { searchParams } = new URL(request.url)
     const category = searchParams.get('category')
+    const semester = searchParams.get('semester')
     const search = searchParams.get('search')
+
 
     // Build filter
     const where: any = {
@@ -22,7 +24,15 @@ export async function GET(request: Request) {
       where.category = category
     }
 
+    if (semester) {
+      const semNum = Number(semester)
+      if (!Number.isNaN(semNum)) {
+        where.semester = semNum
+      }
+    }
+
     if (search) {
+
       where.OR = [
         { title: { contains: search, mode: 'insensitive' } },
         { description: { contains: search, mode: 'insensitive' } }
