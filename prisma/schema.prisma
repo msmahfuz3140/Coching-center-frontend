@@ -15,6 +15,15 @@ enum Role {
   STUDENT
 }
 
+enum CourseCategory {
+  DIPLOMA
+  DUET_TECH
+  DUET_NON_TECH
+  SSC_9_10
+  POLYTECHNIC_ADMISSION
+  REFERRED_BATCH
+}
+
 // ─── Auth Models (Better Auth) ───
 
 model User {
@@ -82,29 +91,65 @@ model Verification {
 // ─── LMS Models ───
 
 model Course {
-  id          String       @id @default(cuid()) @map("_id")
-  title       String
-  description String?
-  thumbnail   String?
-  price       Float        @default(0)
-  isPublished Boolean      @default(false)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id            String         @id @default(cuid()) @map("_id")
+  title         String
+  slug          String         @unique
+  description   String?
+  thumbnail     String?
+  price         Float          @default(0)
+  isPublished   Boolean        @default(false)
+  category      CourseCategory
+  semester      Int?           // For Diploma (1-7)
+  duration      String?        // e.g. "6 months", "1 year"
+  requirements  String[]       // Prerequisites
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
-  // Instructor (Admin who created the course)
-  instructorId String
-  instructor   User         @relation("CourseInstructor", fields: [instructorId], references: [id], onDelete: Cascade)
-
-  // Category / Tags
-  category    String?
-  tags        String[]
+  // Instructor
+  instructorId  String
+  instructor    User           @relation("CourseInstructor", fields: [instructorId], references: [id], onDelete: Cascade)
 
   // Relations
-  videos      Video[]
-  enrollments Enrollment[]
-  notices     Notice[]
+  syllabus      Syllabus[]
+  videos        Video[]
+  enrollments   Enrollment[]
+  notices       Notice[]
 
   @@map("course")
+}
+
+model Syllabus {
+  id          String   @id @default(cuid()) @map("_id")
+  title       String
+  description String?
+  orderIndex  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  courseId    String
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  // Topics under this syllabus item
+  topics      Topic[]
+
+  @@map("syllabus")
+}
+
+model Topic {
+  id          String   @id @default(cuid()) @map("_id")
+  title       String
+  description String?
+  duration    String?  // e.g. "2 weeks", "3 classes"
+  orderIndex  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  syllabusId  String
+  syllabus    Syllabus @relation(fields: [syllabusId], references: [id], onDelete: Cascade)
+
+  @@map("topic")
 }
 
 model Video {
