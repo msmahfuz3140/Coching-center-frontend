@@ -4,26 +4,85 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { authClient } from '@/lib/auth-client'
 import DashboardLayout from '@/components/layout/DashboardLayout'
+import toast from 'react-hot-toast'
+
+type UserRow = {
+  id: string
+  name: string | null
+  email: string
+  role: 'ADMIN' | 'STUDENT'
+  emailVerified: boolean
+  createdAt: string
+}
 
 export default function AdminUsersPage() {
   const [session, setSession] = useState<any>(null)
+  const [users, setUsers] = useState<UserRow[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isUpdating, setIsUpdating] = useState<string | null>(null)
   const router = useRouter()
 
   const loadSession = async () => {
     try {
       const { data } = await authClient.getSession()
-      if (!data) { router.push('/login'); return }
-      if (data.user.role !== 'ADMIN') { router.push('/dashboard'); return }
+      if (!data) {
+        router.push('/login')
+        return
+      }
+      if ((data.user as { role?: string } | undefined)?.role !== 'ADMIN') {
+        router.push('/dashboard')
+        return
+      }
       setSession(data)
     } catch (error) {
       console.error(error)
+    }
+  }
+
+  const loadUsers = async () => {
+    try {
+      const response = await fetch('/api/admin/users')
+      const result = await response.json()
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || 'Failed to load users')
+      }
+      setUsers(result.users)
+    } catch (error) {
+      console.error(error)
+      toast.error(error instanceof Error ? error.message : 'Failed to load users')
     } finally {
       setIsLoading(false)
     }
   }
 
-  useEffect(() => { loadSession() }, [])
+  useEffect(() => {
+    const init = async () => {
+      await loadSession()
+      await loadUsers()
+    }
+    void init()
+  }, [])
+
+  const handleRoleChange = async (userId: string, role: 'ADMIN' | 'STUDENT') => {
+    setIsUpdating(userId)
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, role }),
+      })
+      const result = await response.json()
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || 'Failed to update role')
+      }
+      setUsers((prev) => prev.map((user) => (user.id === userId ? { ...user, role: result.user.role } : user)))
+      toast.success(`Role updated to ${role}`)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to update role')
+    } finally {
+      setIsUpdating(null)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -34,10 +93,6 @@ export default function AdminUsersPage() {
       </DashboardLayout>
     )
   }
-
-  const users = [
-    { name: session?.user?.name || 'You', email: session?.user?.email, role: 'ADMIN', status: 'Active' },
-  ]
 
   return (
     <DashboardLayout>
@@ -60,14 +115,14 @@ export default function AdminUsersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {users.map((user, i) => (
-                  <tr key={i} className="hover:bg-gray-50 transition-colors">
+                {users.map((user) => (
+                  <tr key={user.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-3">
                         <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center">
                           <span className="text-xs font-bold text-white">{user.name?.charAt(0) || 'U'}</span>
                         </div>
-                        <span className="font-medium text-gray-900">{user.name}</span>
+                        <span className="font-medium text-gray-900">{user.name || 'Unnamed'}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-gray-600">{user.email}</td>
@@ -77,12 +132,20 @@ export default function AdminUsersPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        {user.status}
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${user.emailVerified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                        {user.emailVerified ? 'Verified' : 'Pending'}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button className="text-blue-600 hover:text-blue-700 font-medium text-sm">Edit</button>
+                      <select
+                        value={user.role}
+                        onChange={(e) => handleRoleChange(user.id, e.target.value as 'ADMIN' | 'STUDENT')}
+                        disabled={isUpdating === user.id}
+                        className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700"
+                      >
+                        <option value="STUDENT">Student</option>
+                        <option value="ADMIN">Admin</option>
+                      </select>
                     </td>
                   </tr>
                 ))}

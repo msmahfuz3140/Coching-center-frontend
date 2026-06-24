@@ -14,7 +14,7 @@ export default function AdminCoursesPage() {
     try {
       const { data } = await authClient.getSession()
       if (!data) { router.push('/login'); return }
-      if (data.user.role !== 'ADMIN') { router.push('/dashboard'); return }
+      if ((data.user as { role?: string } | undefined)?.role !== 'ADMIN') { router.push('/dashboard'); return }
       setSession(data)
     } catch (error) {
       console.error(error)

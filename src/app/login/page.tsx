@@ -8,7 +8,7 @@ import toast from 'react-hot-toast'
 import { authClient } from '@/lib/auth-client'
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('')
+  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -19,7 +19,14 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      const { data, error } = await authClient.signIn.email({
+      const normalizedIdentifier = identifier.trim().toLowerCase()
+      const email = normalizedIdentifier.includes('@') ? normalizedIdentifier : `${normalizedIdentifier}@coaching.dev`
+
+      if (normalizedIdentifier === 'admin123') {
+        await fetch('/api/admin/seed', { method: 'POST' })
+      }
+
+      const { error } = await authClient.signIn.email({
         email,
         password,
       })
@@ -28,15 +35,18 @@ export default function LoginPage() {
         throw new Error(error.message || 'Failed to login')
       }
 
+      const { data: sessionData } = await authClient.getSession()
+
       toast.success('Login successful! Redirecting...', {
         duration: 2000,
         position: 'top-right',
       })
-      
+
       setTimeout(() => {
-        router.push('/dashboard')
+        const destination = sessionData?.user?.role === 'ADMIN' ? '/admin' : '/dashboard'
+        router.push(destination)
         router.refresh()
-      }, 1000)
+      }, 800)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to login. Please try again.', {
         duration: 5000,
@@ -63,8 +73,8 @@ export default function LoginPage() {
 
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email Address
+              <label htmlFor="identifier" className="block text-sm font-medium text-gray-700 mb-2">
+                Username or Email
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -73,16 +83,17 @@ export default function LoginPage() {
                   </svg>
                 </div>
                 <input
-                  id="email"
-                  name="email"
-                  type="email"
+                  id="identifier"
+                  name="identifier"
+                  type="text"
                   required
                   className="appearance-none block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="admin123 or you@example.com"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
                 />
               </div>
+              <p className="text-xs text-gray-500 mt-2">Demo admin login: admin123 / admin12321</p>
             </div>
 
             <div>
@@ -137,9 +148,9 @@ export default function LoginPage() {
                 </label>
               </div>
               <div className="text-sm">
-                <a href="#" className="font-medium text-blue-600 hover:text-blue-500 transition-colors">
+                <Link href="/forgot-password" className="font-medium text-blue-600 hover:text-blue-500 transition-colors">
                   Forgot password?
-                </a>
+                </Link>
               </div>
             </div>
 

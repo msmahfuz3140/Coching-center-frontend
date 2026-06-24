@@ -128,6 +128,12 @@ export default function Sidebar() {
           })}
         </nav>
 
+        <div className="mt-auto border-t border-gray-700 p-4">
+          <Link href="/dashboard/profile" className="flex items-center justify-center rounded-lg bg-gray-800 px-3 py-2 text-sm font-medium text-gray-200 hover:bg-gray-700">
+            View Profile
+          </Link>
+        </div>
+
         <div className="md:hidden p-4 border-t border-gray-700">
           <button
             onClick={() => setIsCollapsed(true)}
