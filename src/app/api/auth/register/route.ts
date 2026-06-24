@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import bcrypt from 'bcryptjs'
+import { hashPassword } from '@better-auth/utils/password'
 import { prisma } from '@/lib/prisma'
 
 function createOtp() {
@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } })
 
     const otp = createOtp()
-    const hashedPassword = bcrypt.hashSync(password, 10)
+    const hashedPassword = await hashPassword(password)
 
     if (existingUser) {
       if (existingUser.emailVerified) {

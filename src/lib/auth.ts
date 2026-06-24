@@ -3,6 +3,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "@/lib/prisma";
 import { nextCookies } from "better-auth/next-js";
 import { emailOTP } from "better-auth/plugins";
+import { sendVerificationEmail } from "@/lib/email";
 
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
@@ -41,8 +42,7 @@ export const auth = betterAuth({
     emailOTP({
       sendVerificationOTP: async ({ email, otp, type }) => {
         console.log(`[OTP] ${type} code for ${email}: ${otp}`);
-        // In production, integrate with an email/SMS service
-        // await emailService.send({ to: email, subject: 'Your OTP Code', text: `Your OTP is: ${otp}` });
+        await sendVerificationEmail(email, otp);
       },
       expiresIn: 300, // 5 minutes
       otpLength: 6,

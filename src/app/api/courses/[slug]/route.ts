@@ -5,11 +5,12 @@ import { prisma } from '@/lib/prisma'
 // GET /api/courses/[slug] - Get public course details
 export async function GET(
   request: Request,
-  { params }: { params: { slug: string } }
+  context: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const session = await auth.api.getSession({ 
-      headers: request.headers 
+    const params = await context.params
+    const session = await auth.api.getSession({
+      headers: request.headers
     })
 
     const course = await prisma.course.findUnique({

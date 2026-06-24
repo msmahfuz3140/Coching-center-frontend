@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import bcrypt from 'bcryptjs'
+import { hashPassword } from '@better-auth/utils/password'
 import { prisma } from '@/lib/prisma'
 
 export async function POST() {
@@ -11,7 +11,7 @@ export async function POST() {
       return NextResponse.json({ success: true, message: 'Admin already exists.', email: adminEmail })
     }
 
-    const hashedPassword = bcrypt.hashSync('admin12321', 10)
+    const hashedPassword = await hashPassword('admin12321')
     const user = await prisma.user.create({
       data: {
         name: 'admin123',

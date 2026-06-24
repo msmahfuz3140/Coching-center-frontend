@@ -5,13 +5,14 @@ import { prisma } from '@/lib/prisma'
 // GET /api/admin/courses/[id] - Get single course
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth.api.getSession({ 
-      headers: request.headers 
+    const params = await context.params
+    const session = await auth.api.getSession({
+      headers: request.headers
     })
-    
+
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -53,13 +54,14 @@ export async function GET(
 // PATCH /api/admin/courses/[id] - Update course
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth.api.getSession({ 
-      headers: request.headers 
+    const params = await context.params
+    const session = await auth.api.getSession({
+      headers: request.headers
     })
-    
+
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -137,13 +139,14 @@ export async function PATCH(
 // DELETE /api/admin/courses/[id] - Delete course
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth.api.getSession({ 
-      headers: request.headers 
+    const params = await context.params
+    const session = await auth.api.getSession({
+      headers: request.headers
     })
-    
+
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
