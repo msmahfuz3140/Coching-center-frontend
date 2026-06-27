@@ -132,8 +132,20 @@ export default function Sidebar() {
         </nav>
 
         <div className="mt-auto border-t border-gray-700 p-4">
-          <Link href="/dashboard/profile" className="flex items-center justify-center rounded-lg bg-gray-800 px-3 py-2 text-sm font-medium text-gray-200 hover:bg-gray-700">
-            View Profile
+          <Link href="/dashboard/profile" className="flex items-center gap-3 rounded-lg bg-gray-800 px-3 py-2 text-sm font-medium text-gray-200 hover:bg-gray-700 transition-colors group">
+            <div className="relative w-8 h-8 rounded-full overflow-hidden ring-2 ring-gray-600 group-hover:ring-blue-500 transition-all duration-200 flex-shrink-0">
+              {session?.user?.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={session.user.image} alt="Profile" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center">
+                  <span className="text-xs font-bold text-white">
+                    {session?.user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                  </span>
+                </div>
+              )}
+            </div>
+            {!isCollapsed && <span>View Profile</span>}
           </Link>
         </div>
 

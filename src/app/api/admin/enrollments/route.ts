@@ -115,6 +115,24 @@ export async function PATCH(request: Request) {
       }
     })
 
+    // ── Notify the student ──
+    try {
+      const isApproved = status === 'APPROVED'
+      await prisma.notification.create({
+        data: {
+          type: isApproved ? 'enrollment_approved' : 'enrollment_rejected',
+          title: isApproved ? '✅ Enrollment Approved!' : '❌ Enrollment Rejected',
+          message: isApproved
+            ? `You have been approved for "${updated.course.title}". Start learning now!`
+            : `Your enrollment request for "${updated.course.title}" was not approved.${responseMessage ? ` Reason: ${responseMessage}` : ''}`,
+          userId: updated.user.id,
+          courseId: updated.course.id,
+        }
+      })
+    } catch (notifErr) {
+      console.error('Enrollment notification error:', notifErr)
+    }
+
     return NextResponse.json({ 
       message: `Enrollment ${status.toLowerCase()} successfully`,
       enrollment: updated 

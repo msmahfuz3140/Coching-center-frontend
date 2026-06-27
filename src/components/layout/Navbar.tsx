@@ -83,12 +83,23 @@ export default function Navbar() {
                 </Link>
                 <Link
                   href="/dashboard/profile"
-                  className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
+                  className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 group"
                 >
-                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-md">
-                    <span className="text-xs font-bold text-white">
-                      {session?.user?.name?.charAt(0)?.toUpperCase() || 'U'}
-                    </span>
+                  <div className="relative w-8 h-8 rounded-full shadow-md overflow-hidden ring-2 ring-blue-200 group-hover:ring-blue-400 transition-all duration-200">
+                    {session?.user?.image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={session.user.image}
+                        alt={session?.user?.name || 'Profile'}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                        <span className="text-xs font-bold text-white">
+                          {session?.user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                        </span>
+                      </div>
+                    )}
                   </div>
                   <span className="hidden lg:inline">{session?.user?.name || 'Profile'}</span>
                 </Link>

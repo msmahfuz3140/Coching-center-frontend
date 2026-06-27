@@ -64,6 +64,28 @@ export async function POST(request: Request) {
       }
     })
 
+    // ── Notify enrolled students ──
+    try {
+      const enrollments = await prisma.enrollment.findMany({
+        where: { courseId, status: 'APPROVED' },
+        select: { userId: true }
+      })
+      if (enrollments.length > 0) {
+        const course = await prisma.course.findUnique({ where: { id: courseId }, select: { title: true } })
+        await prisma.notification.createMany({
+          data: enrollments.map(e => ({
+            type: 'video',
+            title: `🎬 New Video Added`,
+            message: `"${title}" has been added to ${course?.title || 'your course'}`,
+            userId: e.userId,
+            courseId,
+          }))
+        })
+      }
+    } catch (notifErr) {
+      console.error('Video notification error:', notifErr)
+    }
+
     return NextResponse.json(video, { status: 201 })
   } catch (error) {
     console.error('Error creating video:', error)

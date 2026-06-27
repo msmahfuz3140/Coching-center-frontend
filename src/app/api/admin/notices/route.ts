@@ -60,6 +60,42 @@ export async function POST(request: Request) {
       }
     })
 
+
+    // ── Fan-out: create notifications for enrolled students ──
+    try {
+      let recipientIds: string[] = []
+
+      if (finalCourseId) {
+        const enrollments = await prisma.enrollment.findMany({
+          where: { courseId: finalCourseId, status: 'APPROVED' },
+          select: { userId: true }
+        })
+        recipientIds = enrollments.map(e => e.userId).filter(id => id !== session.user.id)
+      } else {
+        const students = await prisma.user.findMany({
+          where: { role: 'STUDENT' },
+          select: { id: true }
+        })
+        recipientIds = students.map(u => u.id)
+      }
+
+      if (recipientIds.length > 0) {
+        await prisma.notification.createMany({
+          data: recipientIds.map(userId => ({
+            type: 'notice',
+            title: `📢 New Notice: ${title}`,
+            message: notice.course
+              ? `${notice.course.title}: ${content.slice(0, 120)}${content.length > 120 ? '…' : ''}`
+              : content.slice(0, 120) + (content.length > 120 ? '…' : ''),
+            userId,
+            courseId: finalCourseId,
+          }))
+        })
+      }
+    } catch (notifErr) {
+      console.error('Notification fan-out error:', notifErr)
+    }
+
     return NextResponse.json({ success: true, notice }, { status: 201 })
   } catch (error) {
     console.error('Error creating notice:', error)

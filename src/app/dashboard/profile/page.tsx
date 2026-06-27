@@ -1,251 +1,596 @@
 'use client'
 
-import React, { useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
+import { useRouter } from 'next/navigation'
+import { authClient } from '@/lib/auth-client'
+import DashboardLayout from '@/components/layout/DashboardLayout'
+import toast from 'react-hot-toast'
 
-type Tone = 'blue' | 'green' | 'yellow'
-
-type UserLike = {
-    name?: string | null
-    email?: string
-    role?: string
-    createdAt?: string | Date
-    image?: string | null
-    emailVerified?: boolean
+type SessionUser = {
+  id: string
+  name?: string | null
+  email?: string
+  role?: string
+  createdAt?: string | Date
+  image?: string | null
+  emailVerified?: boolean
 }
 
-export default function MyProfileTemplate({
-    user,
-    enrolledCount = 0,
-    completedCount = 0,
-    certificatesCount = 0,
-    studyHours = '0h',
-    achievementsCount = 0,
-}: {
-    user: UserLike
-    enrolledCount?: number
-    completedCount?: number
-    certificatesCount?: number
-    studyHours?: string
-    achievementsCount?: number
-}) {
-    const initials = useMemo(() => {
-        const n = user?.name || 'User'
-        return n
-            .split(' ')
-            .filter(Boolean)
-            .slice(0, 2)
-            .map((p) => p[0]?.toUpperCase())
-            .join('')
-    }, [user?.name])
+type EnrollmentStats = {
+  enrolledCount: number
+  completedCount: number
+  pendingCount: number
+}
 
-    const createdAtLabel = useMemo(() => {
-        if (!user?.createdAt) return 'N/A'
-        const d = typeof user.createdAt === 'string' ? new Date(user.createdAt) : user.createdAt
-        return isNaN(d.getTime())
-            ? 'N/A'
-            : d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-    }, [user?.createdAt])
+type AdminStats = {
+  totalUsers: number
+  totalCourses: number
+  totalEnrollments: number
+  pendingEnrollments: number
+}
 
+export default function ProfilePage() {
+  const router = useRouter()
+  const [user, setUser] = useState<SessionUser | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editName, setEditName] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+  const [enrollmentStats, setEnrollmentStats] = useState<EnrollmentStats>({
+    enrolledCount: 0,
+    completedCount: 0,
+    pendingCount: 0,
+  })
+  const [adminStats, setAdminStats] = useState<AdminStats | null>(null)
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
+  const [oldPassword, setOldPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [isSavingPassword, setIsSavingPassword] = useState(false)
+  const [isHoveringAvatar, setIsHoveringAvatar] = useState(false)
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setIsUploadingImage(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch('/api/upload/profile', { method: 'POST', body: formData })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Upload failed')
+      await authClient.updateUser({ image: data.imageUrl })
+      setUser((prev) => (prev ? { ...prev, image: data.imageUrl } : prev))
+      toast.success('Profile picture updated!')
+      router.refresh() // refresh so navbar/sidebar picks up new image
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Upload failed')
+    } finally {
+      setIsUploadingImage(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
+  useEffect(() => {
+    async function init() {
+      try {
+        const { data } = await authClient.getSession()
+        if (!data) {
+          router.push('/login')
+          return
+        }
+        setUser(data.user as SessionUser)
+        setEditName((data.user as SessionUser).name || '')
+
+        const role = (data.user as SessionUser).role
+        if (role === 'ADMIN') {
+          // load admin stats
+          const res = await fetch('/api/admin/stats')
+          const d = await res.json()
+          if (d.success) setAdminStats(d.stats)
+        } else {
+          // load enrollment stats
+          const res = await fetch('/api/enrollments')
+          const d = await res.json()
+          // API returns array directly
+          const enrollments: { status: string }[] = Array.isArray(d) ? d : (d.enrollments || [])
+          setEnrollmentStats({
+            enrolledCount: enrollments.filter((e) => e.status === 'APPROVED').length,
+            completedCount: enrollments.filter((e) => e.status === 'COMPLETED').length,
+            pendingCount: enrollments.filter((e) => e.status === 'PENDING').length,
+          })
+        }
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    init()
+  }, [router])
+
+  const initials = useMemo(() => {
+    const n = user?.name || 'User'
+    return n
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((p) => p[0]?.toUpperCase())
+      .join('')
+  }, [user?.name])
+
+  const createdAtLabel = useMemo(() => {
+    if (!user?.createdAt) return 'N/A'
+    const d = typeof user.createdAt === 'string' ? new Date(user.createdAt) : user.createdAt
+    return isNaN(d.getTime())
+      ? 'N/A'
+      : d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+  }, [user?.createdAt])
+
+  const isAdmin = user?.role === 'ADMIN'
+
+  async function handleSaveProfile() {
+    if (!editName.trim()) {
+      toast.error('Name cannot be empty')
+      return
+    }
+    setIsSaving(true)
+    try {
+      await authClient.updateUser({ name: editName.trim() })
+      setUser((prev) => (prev ? { ...prev, name: editName.trim() } : prev))
+      setIsEditing(false)
+      toast.success('Profile updated successfully!')
+    } catch {
+      toast.error('Failed to update profile. Please try again.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  async function handleChangePassword() {
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      toast.error('All fields are required')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error('Passwords do not match')
+      return
+    }
+    if (newPassword.length < 6) {
+      toast.error('Password must be at least 6 characters')
+      return
+    }
+    setIsSavingPassword(true)
+    try {
+      await authClient.changePassword({
+        currentPassword: oldPassword,
+        newPassword: newPassword,
+        revokeOtherSessions: false,
+      })
+      toast.success('Password changed successfully!')
+      setIsChangingPassword(false)
+      setOldPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+    } catch {
+      toast.error('Failed to change password. Check your current password.')
+    } finally {
+      setIsSavingPassword(false)
+    }
+  }
+
+  if (isLoading) {
     return (
-        <>
-            <style>{`
-        @page { size: A4; margin: 12mm; background-color: #f8fafc; }
-        * { box-sizing: border-box; }
-        .app-container { display: table; width: 100%; height: 100%; }
-        .sidebar { display: table-cell; width: 220px; background-color: #032174; color: #94a3b8; vertical-align: top; padding: 20px 10px; border-radius: 16px 0 0 16px; }
-        .main-content { display: table-cell; vertical-align: top; padding: 0 0 0 20px; }
-        .logo-area { color: white; font-size: 14pt; font-weight: 700; margin-bottom: 30px; padding-left: 10px; }
-        .logo-area span { color: #38bdf8; }
-        .nav-item { padding: 10px 14px; border-radius: 8px; margin-bottom: 5px; font-size: 9.5pt; font-weight: 500; color: #cbd5e1; }
-        .nav-item.active { background-color: #1d4ed8; color: white; font-weight: 600; }
-        .nav-badge { float: right; background-color: #ef4444; color: white; font-size: 7.5pt; padding: 1px 6px; border-radius: 10px; margin-top: 2px; }
-        .upgrade-box { background: linear-gradient(135deg, #1e3a8a, #1d4ed8); border: 1px solid #2563eb; border-radius: 12px; padding: 15px 12px; text-align: center; color: white; margin-top: 80px; }
-        .upgrade-box p { font-size: 8pt; color: #bfdbfe; margin: 5px 0 12px 0; }
-        .upgrade-btn { background-color: #2563eb; color: white; border: none; padding: 6px 15px; border-radius: 6px; font-size: 8.5pt; font-weight: 600; width: 100%; }
-        .top-header { display: table; width: 100%; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0; }
-        .page-title-area { display: table-cell; vertical-align: middle; }
-        .page-title { font-size: 16pt; font-weight: 700; color: #0f172a; margin: 0; }
-        .breadcrumb { font-size: 8pt; color: #64748b; margin-top: 3px; }
-        .top-profile-area { display: table-cell; text-align: right; vertical-align: middle; }
-        .top-avatar { width: 32px; height: 32px; border-radius: 50%; background-color: #cbd5e1; display: inline-block; vertical-align: middle; margin-left: 10px; }
-        .profile-hero { background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%); border-radius: 16px; padding: 25px; color: white; position: relative; margin-bottom: 20px; }
-        .hero-avatar { width: 80px; height: 80px; border-radius: 50%; border: 3px solid white; background-color: #e2e8f0; float: left; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #0f172a; }
-        .hero-info { margin-left: 100px; padding-top: 5px; }
-        .hero-info h2 { margin: 0; font-size: 16pt; font-weight: 700; }
-        .hero-info p { margin: 4px 0; font-size: 9pt; color: #bfdbfe; }
-        .edit-profile-btn { position: absolute; top: 25px; right: 25px; background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.4); color: white; padding: 6px 14px; border-radius: 8px; font-size: 8.5pt; font-weight: 600; }
-        .stats-container { display: table; width: 100%; border-collapse: separate; border-spacing: 12px 0; margin: -40px 0 20px 0; position: relative; z-index: 10; padding: 0 10px; }
-        .stat-card { display: table-cell; background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; width: 20%; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); text-align: center; }
-        .stat-label { font-size: 8pt; color: #64748b; font-weight: 600; margin-bottom: 5px; }
-        .stat-value { font-size: 16pt; font-weight: 700; color: #0f172a; }
-        .content-grid { display: table; width: 100%; border-collapse: separate; border-spacing: 15px 0; }
-        .left-column { display: table-cell; width: 65%; vertical-align: top; }
-        .right-column { display: table-cell; width: 35%; vertical-align: top; }
-        .panel { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
-        .panel-header { font-size: 10.5pt; font-weight: 700; color: #0f172a; margin-top: 0; margin-bottom: 15px; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; }
-        .panel-header .view-all { float: right; color: #2563eb; font-size: 8pt; font-weight: 600; }
-        .info-grid { display: table; width: 100%; margin-bottom: 5px; }
-        .info-row { display: table-row; }
-        .info-cell { display: table-cell; padding: 8px 5px; font-size: 9pt; border-bottom: 1px solid #f8fafc; }
-        .info-cell.label { color: #64748b; font-weight: 500; width: 35%; }
-        .info-cell.value { color: #1e293b; font-weight: 600; }
-        .action-link { display: block; padding: 8px 10px; background: #f8fafc; border-radius: 6px; margin-bottom: 6px; font-size: 8.5pt; font-weight: 600; color: #475569; text-decoration: none; border: 1px solid #f1f5f9; }
-        .course-item { display: table; width: 100%; margin-bottom: 12px; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #f1f5f9; }
-        .course-thumb { display: table-cell; width: 50px; height: 40px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); border-radius: 6px; vertical-align: middle; text-align: center; color: white; font-size: 12pt; }
-        .thumb-purple { background: linear-gradient(135deg, #a855f7, #6b21a8); }
-        .thumb-emerald { background: linear-gradient(135deg, #10b981, #047857); }
-        .course-details { display: table-cell; vertical-align: middle; padding-left: 12px; }
-        .c-title { font-size: 9.5pt; font-weight: 700; color: #0f172a; margin: 0; }
-        .progress-bar-container { width: 150px; background: #e2e8f0; height: 6px; border-radius: 3px; margin-top: 5px; display: inline-block; vertical-align: middle; }
-        .progress-bar { background: #2563eb; height: 6px; border-radius: 3px; }
-        .progress-text { font-size: 7.5pt; color: #64748b; margin-left: 8px; display: inline-block; vertical-align: middle; font-weight: 600; }
-        .course-action { display: table-cell; vertical-align: middle; text-align: right; width: 80px; }
-        .continue-btn { background: white; border: 1px solid #cbd5e1; color: #2563eb; padding: 4px 10px; border-radius: 6px; font-size: 8pt; font-weight: 600; }
-        .activity-item { position: relative; padding-left: 25px; margin-bottom: 12px; }
-        .activity-item::before { content: ''; position: absolute; left: 6px; top: 4px; width: 8px; height: 8px; border-radius: 50%; background: #3b82f6; }
-        .activity-text { font-size: 9pt; font-weight: 600; color: #334155; margin: 0; }
-        .activity-time { font-size: 7.5pt; color: #94a3b8; margin: 2px 0 0 0; }
-        .achievement-item { display: table; width: 100%; margin-bottom: 10px; }
-        .badge-icon { display: table-cell; width: 30px; font-size: 14pt; vertical-align: middle; }
-        .badge-details { display: table-cell; vertical-align: middle; padding-left: 5px; }
-        .b-title { font-size: 8.5pt; font-weight: 700; color: #1e293b; margin: 0; }
-        .b-desc { font-size: 7.5pt; color: #64748b; margin: 0; }
-      `}</style>
-
-            <div className="app-container">
-                {/* Sidebar is owned by DashboardLayout in this app. Keeping a compact placeholder to match your HTML theme. */}
-                <div className="sidebar" style={{ display: 'none' }} />
-
-                <div className="main-content">
-                    <div className="top-header">
-                        <div className="page-title-area">
-                            <h1 className="page-title">My Profile</h1>
-                            <div className="breadcrumb"> My Profile</div>
-                        </div>
-                        <div className="top-profile-area">
-                            <span style={{ fontSize: 9, fontWeight: 600, color: '#334155' }}>
-                                {user?.name || 'User'} ({user?.role || 'STUDENT'})
-                            </span>
-                            <div className="top-avatar" />
-                        </div>
-                    </div>
-
-
-                    <div className="profile-hero">
-                        <div className="hero-avatar">{initials}</div>
-                        <div className="hero-info">
-                            <h2>{user?.name || 'User'} ✓</h2>
-                            <p>📧 {user?.email}</p>
-                            <p>📅 Joined: {createdAtLabel}</p>
-                        </div>
-                        <button className="edit-profile-btn" type="button">✏️ Edit Profile</button>
-                    </div>
-
-                    <div className="stats-container">
-                        <div className="stat-card"><div className="stat-label">Enrolled Courses</div><div className="stat-value">{enrolledCount}</div></div>
-                        <div className="stat-card"><div className="stat-label">Completed Courses</div><div className="stat-value">{completedCount}</div></div>
-                        <div className="stat-card"><div className="stat-label">Certificates</div><div className="stat-value">{certificatesCount}</div></div>
-                        <div className="stat-card"><div className="stat-label">Study Hours</div><div className="stat-value">{studyHours}</div></div>
-                        <div className="stat-card"><div className="stat-label">Achievements</div><div className="stat-value">{achievementsCount}</div></div>
-                    </div>
-
-                    <div className="content-grid">
-                        <div className="left-column">
-                            <div className="panel">
-                                <h3 className="panel-header">👤 About Me</h3>
-                                <p style={{ fontSize: 9, color: '#475569', lineHeight: 1.5, margin: 0, marginBottom: 15 }}>
-                                    A passionate learner and aspiring engineer. I love to learn new things and take on challenges.
-                                </p>
-                                <div style={{ display: 'table', width: '100%', borderTop: '1px solid #f1f5f9', paddingTop: 10 }}>
-                                    <div style={{ display: 'table-cell', width: '50%', fontSize: 8.5, color: '#64748b' }}>
-                                        📅 <b>Member Since:</b> Jan 15, 2024<br />🆔 <b>Student ID:</b> STU-2024-00125
-                                    </div>
-                                    <div style={{ display: 'table-cell', width: '50%', fontSize: 8.5, color: '#64748b' }}>
-                                        🎂 <b>Date of Birth:</b> May 12, 2004<br />⚦ <b>Gender:</b> Male
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="panel">
-                                <h3 className="panel-header">📚 My Enrolled Courses <span className="view-all">View All</span></h3>
-                                {/* Static placeholders; connect with real data later */}
-                                <div className="course-item">
-                                    <div className="course-thumb thumb-purple"></div>
-                                    <div className="course-details">
-
-                                        <div className="c-title">DUET Admission - Tech</div>
-                                        <div className="progress-bar-container"><div className="progress-bar" style={{ width: '75%' }} /></div>
-                                        <span className="progress-text">75%</span>
-                                    </div>
-                                    <div className="course-action"><button className="continue-btn" type="button">Continue</button></div>
-                                </div>
-                                <div className="course-item">
-                                    <div className="course-thumb thumb-emerald">📖</div>
-                                    <div className="course-details">
-                                        <div className="c-title">SSC 9-10 Complete</div>
-                                        <div className="progress-bar-container"><div className="progress-bar" style={{ width: '60%', background: '#10b981' }} /></div>
-                                        <span className="progress-text">60%</span>
-                                    </div>
-                                    <div className="course-action"><button className="continue-btn" type="button">Continue</button></div>
-                                </div>
-                                <div className="course-item">
-                                    <div className="course-thumb">📐</div>
-                                    <div className="course-details">
-                                        <div className="c-title">Engineering Drawing</div>
-                                        <div className="progress-bar-container"><div className="progress-bar" style={{ width: '40%' }} /></div>
-                                        <span className="progress-text">40%</span>
-                                    </div>
-                                    <div className="course-action"><button className="continue-btn" type="button">Continue</button></div>
-                                </div>
-                            </div>
-
-                            <div className="panel">
-                                <h3 className="panel-header">⚡ Recent Activity <span className="view-all">View All</span></h3>
-                                <div className="activity-item"><p className="activity-text">Completed video: Introduction to Engineering Drawing</p><p className="activity-time">2 hours ago</p></div>
-                                <div className="activity-item"><p className="activity-text">Submitted assignment: Engineering Drawing Assignment 1</p><p className="activity-time">Yesterday</p></div>
-                                <div className="activity-item"><p className="activity-text">Enrolled in course: Thermodynamics</p><p className="activity-time">2 days ago</p></div>
-                                <div className="activity-item"><p className="activity-text">Completed quiz: Basic Mathematics Quiz</p><p className="activity-time">3 days ago</p></div>
-                            </div>
-                        </div>
-
-                        <div className="right-column">
-                            <div className="panel">
-                                <h3 className="panel-header">ℹ️ Account Information</h3>
-                                <div className="info-grid">
-                                    <div className="info-row"><div className="info-cell label">Full Name</div><div className="info-cell value">{user?.name || '—'}</div></div>
-                                    <div className="info-row"><div className="info-cell label">Email</div><div className="info-cell value" style={{ fontSize: 8 }}>{user?.email || '—'}</div></div>
-                                    <div className="info-row"><div className="info-cell label">Phone</div><div className="info-cell value">—</div></div>
-                                    <div className="info-row"><div className="info-cell label">Address</div><div className="info-cell value">—</div></div>
-                                </div>
-                                <button style={{ width: '100%', marginTop: 10, background: '#f1f5f9', border: '1px solid #cbd5e1', color: '#1e293b', padding: 6, borderRadius: 6, fontSize: 8.5, fontWeight: 600 }} type="button">
-                                    Edit Info
-                                </button>
-                            </div>
-
-                            <div className="panel">
-                                <h3 className="panel-header">⚡ Quick Actions</h3>
-                                <span className="action-link">📥 Download Certificate</span>
-                                <span className="action-link">📊 View Study Report</span>
-                                <span className="action-link">⚙️ Manage Enrollments</span>
-                                <span className="action-link">🔒 Change Password</span>
-                                <span className="action-link">🛡️ Privacy Settings</span>
-                            </div>
-
-                            <div className="panel">
-                                <h3 className="panel-header">🏆 Achievements <span className="view-all">View All</span></h3>
-                                <div className="achievement-item"><div className="badge-icon">🥇</div><div className="badge-details"><p className="b-title">First Course Completed</p><p className="b-desc">Completed your first course</p></div></div>
-                                <div className="achievement-item"><div className="badge-icon">🔮</div><div className="badge-details"><p className="b-title">Quiz Master</p><p className="b-desc">Score 100% in 5 quizzes</p></div></div>
-                                <div className="achievement-item"><div className="badge-icon">🟢</div><div className="badge-details"><p className="b-title">Consistent Learner</p><p className="b-desc">Study 7 days in a row</p></div></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div style={{ textAlign: 'center', padding: 15, marginTop: 20, fontSize: 8, color: '#94a3b8', borderTop: '1px solid #e2e8f0' }}>
-                        © 2026 EduHub Coaching Center. All rights reserved.
-                    </div>
-                </div>
-            </div >
-        </>
+      <DashboardLayout>
+        <div className="flex items-center justify-center py-20">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+        </div>
+      </DashboardLayout>
     )
-}
+  }
 
+  if (!user) return null
+
+  return (
+    <DashboardLayout>
+      <div className="space-y-6 max-w-5xl mx-auto">
+        {/* Hero Banner */}
+        <div
+          className="rounded-2xl p-8 text-white shadow-xl relative overflow-hidden"
+          style={{
+            background: isAdmin
+              ? 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 60%, #1d4ed8 100%)'
+              : 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 60%, #38bdf8 100%)',
+          }}
+        >
+          {/* decorative circles */}
+          <div className="absolute -top-10 -right-10 w-48 h-48 rounded-full opacity-10 bg-white" />
+          <div className="absolute -bottom-16 -left-8 w-64 h-64 rounded-full opacity-5 bg-white" />
+
+          <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-6">
+            {/* Avatar with upload on hover */}
+            <div
+              className="relative w-24 h-24 flex-shrink-0 cursor-pointer"
+              onMouseEnter={() => setIsHoveringAvatar(true)}
+              onMouseLeave={() => setIsHoveringAvatar(false)}
+              onClick={() => !isUploadingImage && fileInputRef.current?.click()}
+              title="Click to change profile picture"
+            >
+              {/* Avatar circle */}
+              <div className="w-24 h-24 rounded-full border-4 border-white/40 bg-white/20 flex items-center justify-center text-3xl font-black shadow-lg overflow-hidden">
+                {isUploadingImage ? (
+                  <div className="w-8 h-8 border-3 border-white border-t-transparent rounded-full animate-spin" />
+                ) : user.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={user.image} alt="avatar" className="w-full h-full rounded-full object-cover" />
+                ) : (
+                  <span>{initials}</span>
+                )}
+              </div>
+
+              {/* Hover overlay with camera icon */}
+              <div
+                className="absolute inset-0 rounded-full flex flex-col items-center justify-center transition-all duration-200"
+                style={{
+                  background: isHoveringAvatar && !isUploadingImage ? 'rgba(0,0,0,0.55)' : 'transparent',
+                  opacity: isHoveringAvatar && !isUploadingImage ? 1 : 0,
+                }}
+              >
+                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <span className="text-white text-xs font-semibold mt-1">Change</span>
+              </div>
+
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                className="hidden"
+                onChange={handleAvatarUpload}
+              />
+            </div>
+
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-3 flex-wrap">
+                <h1 className="text-2xl sm:text-3xl font-bold">{user.name || 'User'}</h1>
+                <span
+                  className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                    isAdmin ? 'bg-amber-400 text-amber-900' : 'bg-blue-200 text-blue-900'
+                  }`}
+                >
+                  {isAdmin ? '👑 ADMIN' : '🎓 STUDENT'}
+                </span>
+                {user.emailVerified && (
+                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-400/20 text-green-200 border border-green-400/30">
+                    ✓ Verified
+                  </span>
+                )}
+              </div>
+              <p className="mt-1 text-blue-100 text-sm break-all">{user.email}</p>
+              <p className="mt-1 text-blue-200 text-xs">📅 Member since {createdAtLabel}</p>
+            </div>
+
+            {/* Edit button */}
+            <button
+              onClick={() => setIsEditing(true)}
+              type="button"
+              className="flex items-center gap-2 rounded-xl bg-white/15 hover:bg-white/25 border border-white/30 text-white px-4 py-2 text-sm font-semibold transition-all"
+            >
+              ✏️ Edit Profile
+            </button>
+          </div>
+        </div>
+
+        {/* Stats Row */}
+        {isAdmin ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              { label: 'Total Users', value: adminStats?.totalUsers ?? 0, color: 'from-blue-500 to-blue-600', icon: '👥' },
+              { label: 'Total Courses', value: adminStats?.totalCourses ?? 0, color: 'from-purple-500 to-purple-600', icon: '📚' },
+              { label: 'Total Enrollments', value: adminStats?.totalEnrollments ?? 0, color: 'from-emerald-500 to-emerald-600', icon: '✅' },
+              { label: 'Pending Requests', value: adminStats?.pendingEnrollments ?? 0, color: 'from-amber-500 to-orange-500', icon: '⏳' },
+            ].map((s) => (
+              <div key={s.label} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 text-center">
+                <div className={`inline-flex w-12 h-12 rounded-xl bg-gradient-to-br ${s.color} items-center justify-center text-2xl mb-3 shadow-md`}>
+                  {s.icon}
+                </div>
+                <p className="text-3xl font-bold text-gray-900">{s.value}</p>
+                <p className="text-sm text-gray-500 mt-1">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {[
+              { label: 'Active Courses', value: enrollmentStats.enrolledCount, color: 'from-blue-500 to-blue-600', icon: '📘' },
+              { label: 'Completed', value: enrollmentStats.completedCount, color: 'from-emerald-500 to-green-600', icon: '🏆' },
+              { label: 'Pending Enrollment', value: enrollmentStats.pendingCount, color: 'from-amber-500 to-orange-500', icon: '⏳' },
+            ].map((s) => (
+              <div key={s.label} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 text-center">
+                <div className={`inline-flex w-12 h-12 rounded-xl bg-gradient-to-br ${s.color} items-center justify-center text-2xl mb-3 shadow-md`}>
+                  {s.icon}
+                </div>
+                <p className="text-3xl font-bold text-gray-900">{s.value}</p>
+                <p className="text-sm text-gray-500 mt-1">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Main Content Grid */}
+        <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
+          {/* Left column */}
+          <div className="space-y-6">
+            {/* Account Info */}
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+              <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <span className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-base">ℹ️</span>
+                Account Information
+              </h2>
+              <div className="divide-y divide-gray-100">
+                {[
+                  { label: 'Full Name', value: user.name || '—' },
+                  { label: 'Email Address', value: user.email || '—' },
+                  { label: 'Role', value: isAdmin ? 'Administrator' : 'Student' },
+                  { label: 'Email Verified', value: user.emailVerified ? '✅ Yes' : '❌ No' },
+                  { label: 'Member Since', value: createdAtLabel },
+                ].map((row) => (
+                  <div key={row.label} className="py-3 flex items-center justify-between gap-4">
+                    <span className="text-sm text-gray-500 font-medium w-40 flex-shrink-0">{row.label}</span>
+                    <span className="text-sm text-gray-900 font-semibold text-right break-all">{row.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+              <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <span className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center text-base">⚡</span>
+                Quick Actions
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {isAdmin ? (
+                  <>
+                    <a href="/admin/users" className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all group">
+                      <span className="text-xl">👥</span>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-800 group-hover:text-blue-700">Manage Users</p>
+                        <p className="text-xs text-gray-500">View & manage students</p>
+                      </div>
+                    </a>
+                    <a href="/admin/courses" className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all group">
+                      <span className="text-xl">📚</span>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-800 group-hover:text-blue-700">Manage Courses</p>
+                        <p className="text-xs text-gray-500">Create & edit courses</p>
+                      </div>
+                    </a>
+                    <a href="/admin/enrollments" className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 hover:border-amber-300 hover:bg-amber-50 transition-all group">
+                      <span className="text-xl">✅</span>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-800 group-hover:text-amber-700">Enrollments</p>
+                        <p className="text-xs text-gray-500">Approve/reject requests</p>
+                      </div>
+                    </a>
+                    <a href="/admin/notices" className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 hover:border-green-300 hover:bg-green-50 transition-all group">
+                      <span className="text-xl">📢</span>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-800 group-hover:text-green-700">Notices</p>
+                        <p className="text-xs text-gray-500">Post announcements</p>
+                      </div>
+                    </a>
+                  </>
+                ) : (
+                  <>
+                    <a href="/dashboard/courses" className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all group">
+                      <span className="text-xl">📘</span>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-800 group-hover:text-blue-700">My Courses</p>
+                        <p className="text-xs text-gray-500">View enrolled courses</p>
+                      </div>
+                    </a>
+                    <a href="/dashboard/assignments" className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 hover:border-purple-300 hover:bg-purple-50 transition-all group">
+                      <span className="text-xl">📝</span>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-800 group-hover:text-purple-700">Assignments</p>
+                        <p className="text-xs text-gray-500">Check your tasks</p>
+                      </div>
+                    </a>
+                    <a href="/dashboard/notices" className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 hover:border-amber-300 hover:bg-amber-50 transition-all group">
+                      <span className="text-xl">🔔</span>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-800 group-hover:text-amber-700">Notices</p>
+                        <p className="text-xs text-gray-500">View announcements</p>
+                      </div>
+                    </a>
+                    <a href="/courses" className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 hover:border-green-300 hover:bg-green-50 transition-all group">
+                      <span className="text-xl">🔍</span>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-800 group-hover:text-green-700">Browse Courses</p>
+                        <p className="text-xs text-gray-500">Explore new courses</p>
+                      </div>
+                    </a>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Right column */}
+          <div className="space-y-6">
+            {/* Security */}
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+              <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                <span className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-base">🔒</span>
+                Security
+              </h2>
+              <p className="text-sm text-gray-500 mb-4">Keep your account secure by updating your password regularly.</p>
+              <button
+                onClick={() => setIsChangingPassword(true)}
+                type="button"
+                className="w-full py-2.5 rounded-xl border border-red-200 text-red-600 font-semibold text-sm hover:bg-red-50 transition-all"
+              >
+                🔑 Change Password
+              </button>
+            </div>
+
+            {/* Role Badge */}
+            <div
+              className="rounded-2xl p-6 text-white"
+              style={{
+                background: isAdmin
+                  ? 'linear-gradient(135deg, #1e293b, #1e3a8a)'
+                  : 'linear-gradient(135deg, #1e3a8a, #2563eb)',
+              }}
+            >
+              <div className="text-center">
+                <div className="text-5xl mb-3">{isAdmin ? '👑' : '🎓'}</div>
+                <h3 className="text-xl font-bold">{isAdmin ? 'Administrator' : 'Student'}</h3>
+                <p className="text-blue-200 text-sm mt-2">
+                  {isAdmin
+                    ? 'You have full access to manage the coaching center platform.'
+                    : 'You are enrolled as a student in the coaching center.'}
+                </p>
+                <div className="mt-4 pt-4 border-t border-white/20">
+                  <p className="text-xs text-blue-300">Account ID</p>
+                  <p className="text-xs text-white font-mono mt-1 break-all opacity-70">{user.id}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Edit Profile Modal */}
+      {isEditing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-900">✏️ Edit Profile</h3>
+              <button
+                onClick={() => { setIsEditing(false); setEditName(user.name || '') }}
+                className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-500 transition"
+                type="button"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Full Name</label>
+                <input
+                  type="text"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter your full name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
+                <input
+                  type="email"
+                  value={user.email || ''}
+                  disabled
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-gray-50 text-gray-400 cursor-not-allowed"
+                />
+                <p className="text-xs text-gray-400 mt-1">Email cannot be changed</p>
+              </div>
+            </div>
+            <div className="p-6 pt-0 flex gap-3">
+              <button
+                onClick={() => { setIsEditing(false); setEditName(user.name || '') }}
+                type="button"
+                className="flex-1 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveProfile}
+                type="button"
+                disabled={isSaving}
+                className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition disabled:opacity-60"
+              >
+                {isSaving ? 'Saving…' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Change Password Modal */}
+      {isChangingPassword && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-900">🔑 Change Password</h3>
+              <button
+                onClick={() => { setIsChangingPassword(false); setOldPassword(''); setNewPassword(''); setConfirmPassword('') }}
+                className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-500 transition"
+                type="button"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Current Password</label>
+                <input
+                  type="password"
+                  value={oldPassword}
+                  onChange={(e) => setOldPassword(e.target.value)}
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Enter current password"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">New Password</label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Min. 6 characters"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Confirm New Password</label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Re-enter new password"
+                />
+              </div>
+            </div>
+            <div className="p-6 pt-0 flex gap-3">
+              <button
+                onClick={() => { setIsChangingPassword(false); setOldPassword(''); setNewPassword(''); setConfirmPassword('') }}
+                type="button"
+                className="flex-1 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleChangePassword}
+                type="button"
+                disabled={isSavingPassword}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm transition disabled:opacity-60"
+              >
+                {isSavingPassword ? 'Updating…' : 'Update Password'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </DashboardLayout>
+  )
+}

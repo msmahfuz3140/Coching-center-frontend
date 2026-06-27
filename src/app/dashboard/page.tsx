@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import DashboardLayout from '@/components/layout/DashboardLayout'
-import toast from 'react-hot-toast'
+import { authClient } from '@/lib/auth-client'
 
 interface Notice {
   id: string
@@ -14,115 +15,384 @@ interface Notice {
   course: { id: string; title: string } | null
 }
 
-const highlights = [
-  { label: 'Enrolled Courses', value: '3', accent: 'from-blue-500 to-cyan-500' },
-  { label: 'Assignments Due', value: '2', accent: 'from-amber-500 to-orange-500' },
-  { label: 'Completion Rate', value: '78%', accent: 'from-emerald-500 to-green-500' },
-]
+interface Enrollment {
+  id: string
+  status: string
+  progress: number
+  enrolledAt: string
+  course: {
+    id: string
+    title: string
+    category: string
+    thumbnail?: string | null
+  }
+}
+
+interface SessionUser {
+  id: string
+  name?: string | null
+  email?: string
+  role?: string
+  image?: string | null
+}
+
+const priorityConfig: Record<string, { color: string; dot: string; label: string }> = {
+  low:    { color: 'bg-gray-100 text-gray-600 border border-gray-200',     dot: 'bg-gray-400',    label: 'Low' },
+  normal: { color: 'bg-blue-50 text-blue-700 border border-blue-200',      dot: 'bg-blue-500',    label: 'Normal' },
+  high:   { color: 'bg-orange-50 text-orange-700 border border-orange-200', dot: 'bg-orange-500',  label: 'High' },
+  urgent: { color: 'bg-red-50 text-red-700 border border-red-200',          dot: 'bg-red-500',     label: 'Urgent' },
+}
+
+const categoryLabels: Record<string, string> = {
+  DIPLOMA: 'Diploma',
+  DUET_TECH: 'DUET Tech',
+  DUET_NON_TECH: 'DUET Non-Tech',
+  SSC_9_10: 'SSC 9-10',
+  POLYTECHNIC_ADMISSION: 'Polytechnic',
+  REFERRED_BATCH: 'Referred',
+}
+
+function getGreeting() {
+  const h = new Date().getHours()
+  if (h < 12) return 'Good morning'
+  if (h < 17) return 'Good afternoon'
+  return 'Good evening'
+}
+
+function formatDate(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
 
 export default function DashboardPage() {
-  const [recentNotices, setRecentNotices] = useState<Notice[]>([])
-  const [loadingNotices, setLoadingNotices] = useState(true)
+  const router = useRouter()
+  const [user, setUser] = useState<SessionUser | null>(null)
+  const [notices, setNotices] = useState<Notice[]>([])
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [currentTime, setCurrentTime] = useState(new Date())
 
   useEffect(() => {
-    async function loadNotices() {
-      try {
-        const res = await fetch('/api/notices')
-        const d = await res.json()
-        if (d.success) {
-          setRecentNotices(d.notices.slice(0, 3))
-        }
-      } catch {
-        // silently fail
-      } finally {
-        setLoadingNotices(false)
-      }
-    }
-    loadNotices()
+    const timer = setInterval(() => setCurrentTime(new Date()), 60000)
+    return () => clearInterval(timer)
   }, [])
 
-  const priorityColors: Record<string, string> = {
-    low: 'bg-gray-100 text-gray-700',
-    normal: 'bg-blue-100 text-blue-700',
-    high: 'bg-orange-100 text-orange-700',
-    urgent: 'bg-red-100 text-red-700',
+  useEffect(() => {
+    async function init() {
+      try {
+        const { data } = await authClient.getSession()
+        if (!data) { router.push('/login'); return }
+        setUser(data.user as SessionUser)
+
+        const [noticeRes, enrollRes] = await Promise.all([
+          fetch('/api/notices'),
+          fetch('/api/enrollments'),
+        ])
+        const noticeData = await noticeRes.json()
+        const enrollData = await enrollRes.json()
+
+        if (noticeData.success) setNotices(noticeData.notices.slice(0, 4))
+        if (Array.isArray(enrollData)) setEnrollments(enrollData.filter((e: Enrollment) => e.status === 'APPROVED').slice(0, 4))
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    init()
+  }, [router])
+
+  const initials = (user?.name || 'U').split(' ').filter(Boolean).slice(0, 2).map(p => p[0]?.toUpperCase()).join('')
+
+  const approvedCount  = enrollments.length
+  const pendingCount   = enrollments.filter(e => e.status === 'PENDING').length
+
+  const stats = [
+    {
+      label: 'Enrolled Courses',
+      value: approvedCount,
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+        </svg>
+      ),
+      gradient: 'from-blue-500 to-indigo-600',
+      bg: 'bg-blue-50',
+      text: 'text-blue-600',
+      href: '/dashboard/courses',
+    },
+    {
+      label: 'Pending Enrollments',
+      value: pendingCount,
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
+      gradient: 'from-amber-500 to-orange-500',
+      bg: 'bg-amber-50',
+      text: 'text-amber-600',
+      href: '/courses',
+    },
+    {
+      label: 'Recent Notices',
+      value: notices.length,
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        </svg>
+      ),
+      gradient: 'from-purple-500 to-pink-500',
+      bg: 'bg-purple-50',
+      text: 'text-purple-600',
+      href: '/dashboard/notices',
+    },
+  ]
+
+  const quickActions = [
+    { href: '/dashboard/courses',     icon: '📘', label: 'My Courses',    desc: 'View enrolled courses',        color: 'hover:border-blue-300 hover:bg-blue-50 group-hover:text-blue-600' },
+    { href: '/dashboard/assignments', icon: '📝', label: 'Assignments',   desc: 'Check pending tasks',          color: 'hover:border-purple-300 hover:bg-purple-50 group-hover:text-purple-600' },
+    { href: '/dashboard/notices',     icon: '🔔', label: 'Notices',       desc: 'View announcements',           color: 'hover:border-amber-300 hover:bg-amber-50 group-hover:text-amber-600' },
+    { href: '/courses',               icon: '🔍', label: 'Browse Courses', desc: 'Explore & enroll in courses', color: 'hover:border-emerald-300 hover:bg-emerald-50 group-hover:text-emerald-600' },
+    { href: '/dashboard/profile',     icon: '👤', label: 'My Profile',    desc: 'Edit profile & settings',     color: 'hover:border-indigo-300 hover:bg-indigo-50 group-hover:text-indigo-600' },
+  ]
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-14 h-14 rounded-full border-4 border-blue-600/20 border-t-blue-600 animate-spin" />
+            <p className="text-gray-500 font-medium">Loading your dashboard…</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
   }
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div className="rounded-2xl border border-blue-100 bg-gradient-to-r from-blue-600 to-indigo-600 p-8 text-white shadow-xl">
-          <p className="text-sm uppercase tracking-[0.3em] text-blue-100">Student Portal</p>
-          <h1 className="mt-3 text-3xl font-bold">Welcome back! Your learning dashboard is ready.</h1>
-          <p className="mt-3 max-w-2xl text-sm text-blue-100">Track your classes, assignments, and progress in one place.</p>
+      <div className="space-y-6 max-w-7xl mx-auto">
+
+        {/* ── Hero Banner ── */}
+        <div className="relative rounded-3xl overflow-hidden shadow-2xl" style={{ background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #38bdf8 100%)' }}>
+          {/* Decorative blobs */}
+          <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full bg-white/5" />
+          <div className="absolute -bottom-20 -left-10 w-80 h-80 rounded-full bg-white/5" />
+          <div className="absolute top-8 right-40 w-32 h-32 rounded-full bg-white/5" />
+
+          <div className="relative px-8 py-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+            <div className="flex items-center gap-5">
+              {/* Avatar */}
+              <Link href="/dashboard/profile">
+                <div className="w-16 h-16 rounded-2xl border-2 border-white/40 bg-white/20 flex items-center justify-center font-black text-xl text-white shadow-lg overflow-hidden hover:scale-105 transition-transform cursor-pointer flex-shrink-0">
+                  {user?.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={user.image} alt="avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    <span>{initials}</span>
+                  )}
+                </div>
+              </Link>
+
+              <div>
+                <p className="text-blue-200 text-sm font-medium tracking-wide">
+                  {getGreeting()} 👋 · {currentTime.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                </p>
+                <h1 className="mt-1 text-2xl sm:text-3xl font-extrabold text-white leading-tight">
+                  {user?.name || 'Student'}
+                </h1>
+                <p className="mt-1 text-blue-100 text-sm">
+                  Track your progress, stay on top of notices, and keep learning! 🚀
+                </p>
+              </div>
+            </div>
+
+            {/* CTA */}
+            <Link
+              href="/courses"
+              className="flex-shrink-0 inline-flex items-center gap-2 bg-white text-blue-700 font-bold px-6 py-3 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all text-sm"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+              Enroll in a Course
+            </Link>
+          </div>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-3">
-          {highlights.map((item) => (
-            <div key={item.label} className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-              <div className={`h-2 w-20 rounded-full bg-gradient-to-r ${item.accent}`} />
-              <p className="mt-4 text-3xl font-bold text-gray-900">{item.value}</p>
-              <p className="mt-1 text-sm text-gray-600">{item.label}</p>
-            </div>
+        {/* ── Stats Row ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+          {stats.map((s) => (
+            <Link key={s.label} href={s.href} className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg transition-all p-6 flex items-center gap-5">
+              <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${s.gradient} flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform flex-shrink-0`}>
+                {s.icon}
+              </div>
+              <div>
+                <p className="text-3xl font-extrabold text-gray-900">{s.value}</p>
+                <p className="text-sm text-gray-500 font-medium mt-0.5">{s.label}</p>
+              </div>
+              <svg className="w-5 h-5 text-gray-300 group-hover:text-blue-400 ml-auto transition-colors" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
           ))}
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
-          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">This week's focus</h2>
-                <p className="mt-1 text-sm text-gray-600">Keep up the momentum with your latest topics.</p>
-              </div>
-              <span className="rounded-full bg-emerald-100 px-3 py-1 text-sm font-medium text-emerald-700">On track</span>
-            </div>
-            <div className="mt-6 space-y-4">
-              {['Mathematics revision', 'Physics practice set', 'Live doubt session'].map((task) => (
-                <div key={task} className="flex items-center justify-between rounded-xl bg-gray-50 px-4 py-3">
-                  <span className="font-medium text-gray-700">{task}</span>
-                  <span className="text-sm text-gray-500">Ready</span>
+        {/* ── Main Grid ── */}
+        <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+
+          {/* LEFT: My Courses */}
+          <div className="space-y-6">
+            {/* Active Courses */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">📘 My Active Courses</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">Courses you are enrolled in</p>
                 </div>
-              ))}
+                <Link href="/dashboard/courses" className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1">
+                  View all
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                </Link>
+              </div>
+
+              {enrollments.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center text-3xl mb-4">📚</div>
+                  <p className="text-gray-700 font-semibold">No courses yet</p>
+                  <p className="text-gray-400 text-sm mt-1">Browse and enroll in a course to get started</p>
+                  <Link href="/courses" className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-semibold rounded-xl hover:bg-blue-700 transition-colors">
+                    Browse Courses →
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {enrollments.map((e) => (
+                    <div key={e.id} className="flex items-center gap-4 p-4 rounded-xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50/30 transition-all group">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0 shadow-md">
+                        {categoryLabels[e.course.category]?.[0] || '📘'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-gray-900 truncate group-hover:text-blue-700 transition-colors">{e.course.title}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{categoryLabels[e.course.category] || e.course.category} · Enrolled {formatDate(e.enrolledAt)}</p>
+                        <div className="mt-2 flex items-center gap-2">
+                          <div className="flex-1 bg-gray-200 rounded-full h-1.5">
+                            <div className="bg-gradient-to-r from-blue-500 to-indigo-500 h-1.5 rounded-full transition-all" style={{ width: `${e.progress || 0}%` }} />
+                          </div>
+                          <span className="text-xs font-semibold text-gray-500">{e.progress || 0}%</span>
+                        </div>
+                      </div>
+                      <Link href="/dashboard/courses" className="flex-shrink-0 px-3 py-1.5 bg-white border border-gray-200 text-blue-600 text-xs font-semibold rounded-lg hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all">
+                        Continue
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Recent Notices */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">🔔 Recent Notices</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">Latest announcements for you</p>
+                </div>
+                <Link href="/dashboard/notices" className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1">
+                  View all
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                </Link>
+              </div>
+
+              {notices.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <div className="w-14 h-14 bg-purple-50 rounded-2xl flex items-center justify-center text-2xl mb-3">📭</div>
+                  <p className="text-gray-500 text-sm">No notices yet</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {notices.map((n) => {
+                    const cfg = priorityConfig[n.priority] || priorityConfig.normal
+                    return (
+                      <div key={n.id} className="flex items-start gap-3 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors border border-transparent hover:border-gray-200">
+                        <span className={`mt-0.5 flex-shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${cfg.color}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+                          {cfg.label}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-gray-900 truncate">{n.title}</p>
+                          <p className="text-xs text-gray-400 mt-0.5 truncate">
+                            {n.course ? n.course.title : 'General'} · {formatDate(n.createdAt)}
+                          </p>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-            <h2 className="text-xl font-semibold text-gray-900">Quick actions</h2>
-            <div className="mt-4 space-y-3">
-              <a href="/dashboard/courses" className="block rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 hover:border-blue-300 hover:text-blue-600">View my courses</a>
-              <a href="/dashboard/assignments" className="block rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 hover:border-blue-300 hover:text-blue-600">Check assignments</a>
-              <a href="/dashboard/notices" className="block rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 hover:border-blue-300 hover:text-blue-600">View notices</a>
-              <a href="/dashboard/profile" className="block rounded-xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 hover:border-blue-300 hover:text-blue-600">Update profile</a>
+          {/* RIGHT: Quick Actions + Motivational */}
+          <div className="space-y-6">
+            {/* Quick Actions */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+              <h2 className="text-lg font-bold text-gray-900 mb-1">⚡ Quick Actions</h2>
+              <p className="text-xs text-gray-400 mb-5">Jump to any section</p>
+              <div className="space-y-2.5">
+                {quickActions.map((a) => (
+                  <Link key={a.href} href={a.href} className={`group flex items-center gap-4 p-3.5 rounded-xl border border-gray-100 transition-all ${a.color}`}>
+                    <span className="text-2xl flex-shrink-0">{a.icon}</span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-gray-800 group-hover:inherit transition-colors">{a.label}</p>
+                      <p className="text-xs text-gray-400">{a.desc}</p>
+                    </div>
+                    <svg className="w-4 h-4 text-gray-300 group-hover:text-current ml-auto flex-shrink-0 transition-colors" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {/* Motivational / Tips Card */}
+            <div className="rounded-2xl overflow-hidden" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%)' }}>
+              <div className="p-6">
+                <div className="text-4xl mb-3">🎯</div>
+                <h3 className="text-white font-bold text-lg">Stay Consistent!</h3>
+                <p className="text-blue-200 text-sm mt-2 leading-relaxed">
+                  Consistent effort beats talent. Study a little every day and you will achieve great results.
+                </p>
+                <div className="mt-5 flex items-center gap-3">
+                  <Link href="/courses" className="flex-1 text-center py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl transition-colors">
+                    Explore Courses
+                  </Link>
+                  <Link href="/dashboard/profile" className="flex-1 text-center py-2.5 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold rounded-xl transition-colors">
+                    My Profile
+                  </Link>
+                </div>
+              </div>
+
+              {/* Progress Tip */}
+              <div className="border-t border-white/10 px-6 py-4 flex items-center gap-3">
+                <div className="w-8 h-8 bg-emerald-500/20 rounded-lg flex items-center justify-center text-emerald-400 text-lg flex-shrink-0">✓</div>
+                <p className="text-blue-200 text-xs leading-relaxed">
+                  <span className="text-white font-semibold">Tip:</span> Check notices regularly — your admin may post important updates!
+                </p>
+              </div>
+            </div>
+
+            {/* Time Card */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 text-center">
+              <p className="text-4xl font-black text-gray-900 tabular-nums">
+                {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+              </p>
+              <p className="text-sm text-gray-400 mt-1 font-medium">
+                {currentTime.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+              </p>
             </div>
           </div>
         </div>
-
-        {/* Recent Notices Section */}
-        {!loadingNotices && recentNotices.length > 0 && (
-          <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">Recent Notices</h2>
-              <Link href="/dashboard/notices" className="text-sm font-medium text-blue-600 hover:text-blue-700">
-                View all &rarr;
-              </Link>
-            </div>
-            <div className="space-y-3">
-              {recentNotices.map(notice => (
-                <div key={notice.id} className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition">
-                  <span className={`mt-0.5 px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap ${priorityColors[notice.priority] || 'bg-gray-100 text-gray-700'}`}>
-                    {notice.priority.toUpperCase()}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-gray-900 truncate">{notice.title}</p>
-                    <p className="text-xs text-gray-500 truncate">
-                      {notice.course ? notice.course.title : 'General'} &middot; {new Date(notice.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     </DashboardLayout>
   )
