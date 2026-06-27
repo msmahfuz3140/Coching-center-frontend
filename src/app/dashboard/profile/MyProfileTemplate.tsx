@@ -120,7 +120,7 @@ export default function MyProfileTemplate({
                     <div className="top-header">
                         <div className="page-title-area">
                             <h1 className="page-title">My Profile</h1>
-                            <div className="breadcrumb"> My Profile</div>
+                            <div className="breadcrumb">Dashboard > My Profile</div>
                         </div>
                         <div className="top-profile-area">
                             <span style={{ fontSize: 9, fontWeight: 600, color: '#334155' }}>

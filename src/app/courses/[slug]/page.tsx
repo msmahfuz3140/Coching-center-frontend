@@ -151,29 +151,39 @@ export default function CourseDetailsPage() {
             <span className="px-2.5 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-md">{getLabel(course.category)}</span>
             {course.semester && <span className="px-2.5 py-1 bg-indigo-100 text-indigo-700 text-xs font-semibold rounded-md">Semester {course.semester}</span>}
           </div>
+
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{course.title}</h1>
               {course.description && <p className="text-gray-500 mt-1 max-w-2xl">{course.description}</p>}
-              <div className="flex items-center gap-4 mt-3 text-sm text-gray-500">
+              <div className="flex flex-wrap items-center gap-3 mt-3 text-sm text-gray-500">
                 {course.instructor?.name && <span>{course.instructor.name}</span>}
                 {course._count && <span>{course._count.videos} videos</span>}
+                {!hasAccess && (
+                  <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-50 text-blue-700 text-xs font-semibold">
+                    <span className="w-2 h-2 rounded-full bg-blue-500" />
+                    Locked — Enroll to watch
+                  </span>
+                )}
               </div>
             </div>
-            <button
-              onClick={handleRequestAccess}
-              disabled={requesting}
-              className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition ${
-                hasAccess
-                  ? 'bg-green-100 text-green-700 cursor-default'
-                  : 'bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400'
-              }`}
-            >
-              {requesting ? 'Enrolling...' : hasAccess ? 'Enrolled' : 'Enroll Now'}
-            </button>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleRequestAccess}
+                disabled={requesting || hasAccess}
+                className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition ${hasAccess
+                    ? 'bg-green-100 text-green-700 cursor-default'
+                    : 'bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400'
+                  }`}
+              >
+                {requesting ? 'Enrolling...' : hasAccess ? 'Enrolled' : 'Enroll Now'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
+
 
       <div className="max-w-7xl mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

@@ -54,8 +54,55 @@ export async function GET(
       }
     }
 
+    // Enrolled access control (course-locked content)
+    // - Admin always has access
+    // - Others: only APPROVED enrollment gets full video payload
+    // - Not approved: keep course+syllabus metadata, but sanitize videos so youtubeUrl/content are not leaked
+
+    const user = session?.user
+    if (user?.role !== 'ADMIN') {
+      const approvedEnrollment = await prisma.enrollment.findUnique({
+        where: {
+          userId_courseId: {
+            userId: user.id,
+            courseId: course.id,
+          },
+        },
+        select: { status: true },
+      })
+
+      const isApproved = approvedEnrollment?.status === 'APPROVED'
+      if (!isApproved) {
+        const sanitizedVideos = (course.videos || []).map((v) => ({
+          ...v,
+          youtubeUrl: '',
+          description: null,
+        }))
+
+        return NextResponse.json({
+          ...course,
+          videos: sanitizedVideos,
+        })
+      }
+    }
+
+    // If no session/user: also sanitize videos
+    if (!user) {
+      const sanitizedVideos = (course.videos || []).map((v) => ({
+        ...v,
+        youtubeUrl: '',
+        description: null,
+      }))
+      return NextResponse.json({
+        ...course,
+        videos: sanitizedVideos,
+      })
+    }
+
+
     return NextResponse.json(course)
   } catch (error) {
+
     console.error('Error fetching course:', error)
     return NextResponse.json({ error: 'Failed to fetch course' }, { status: 500 })
   }
