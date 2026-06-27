@@ -62,15 +62,63 @@ export default function Home() {
           </div>
         </div>
 
+        <div className="mt-16">
+          <h2 className="text-center text-3xl font-bold text-gray-900">Why coaching centers choose us</h2>
+          <p className="text-center text-gray-600 mt-3 max-w-2xl mx-auto">
+            Everything you need to run courses and stay connected to students—wrapped in a clean admin experience.
+          </p>
+
+          <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              {
+                title: 'Fast Admin Workflow',
+                desc: 'Manage users, courses and access in minutes, not hours.',
+                icon: '⚡',
+              },
+              {
+                title: 'Clear Student Progress',
+                desc: 'Track assignments and reviews in one place.',
+                icon: '📈',
+              },
+              {
+                title: 'Secure Enrollment Control',
+                desc: 'Give access only to selected courses.',
+                icon: '🔒',
+              },
+              {
+                title: 'Responsive UI',
+                desc: 'Mobile-first layout for admins and students.',
+                icon: '📱',
+              },
+            ].map((x) => (
+              <div key={x.title} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 hover:shadow-lg transition">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center text-2xl">
+                  {x.icon}
+                </div>
+                <h3 className="mt-4 text-lg font-bold text-gray-900">{x.title}</h3>
+                <p className="mt-2 text-gray-600 text-sm leading-relaxed">{x.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
         <div className="mt-20 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-3xl p-12 text-center text-white">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Ready to Get Started?</h2>
           <p className="text-lg mb-8 opacity-90">Join thousands of coaching centers already using our platform.</p>
-          <Link
-            href="/register"
-            className="inline-block px-8 py-4 bg-white text-blue-600 font-semibold rounded-lg hover:bg-gray-100 transition-all duration-300 shadow-lg"
-          >
-            Create Free Account
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link
+              href="/register"
+              className="inline-block px-8 py-4 bg-white text-blue-600 font-semibold rounded-lg hover:bg-gray-100 transition-all duration-300 shadow-lg"
+            >
+              Create Free Account
+            </Link>
+            <Link
+              href="/courses"
+              className="inline-block px-8 py-4 bg-transparent border border-white/40 text-white font-semibold rounded-lg hover:bg-white/10 transition-all duration-300"
+            >
+              Explore Courses
+            </Link>
+          </div>
         </div>
       </main>
     </div>

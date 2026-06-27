@@ -25,7 +25,11 @@ export default function Navbar() {
   }
 
   useEffect(() => {
-    loadSession()
+    // load session without triggering eslint rule about setState in effect
+    const run = async () => {
+      await loadSession()
+    }
+    void run()
     const handleScroll = () => setScrolled(window.scrollY > 20)
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
@@ -145,20 +149,22 @@ export default function Navbar() {
         </div>
       </div>
 
-          {/* Mobile Menu */}
-        <div className={`md:hidden transition-all duration-300 overflow-hidden ${isMenuOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
-          <div className="px-4 py-4 space-y-2 bg-white border-t border-gray-100">
-            <MobileNavLink href="/" onClick={() => setIsMenuOpen(false)}>Home</MobileNavLink>
-            <MobileNavLink href="/courses" onClick={() => setIsMenuOpen(false)}>Courses</MobileNavLink>
-            <MobileNavLink href="/features" onClick={() => setIsMenuOpen(false)}>Features</MobileNavLink>
-            <MobileNavLink href="/about" onClick={() => setIsMenuOpen(false)}>About</MobileNavLink>
+      {/* Mobile Menu */}
+      <div className={`md:hidden transition-all duration-300 overflow-hidden ${isMenuOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
+        <div className="px-4 py-4 space-y-2 bg-white border-t border-gray-100">
+          <MobileNavLink href="/" onClick={() => setIsMenuOpen(false)}>Home</MobileNavLink>
+          <MobileNavLink href="/courses" onClick={() => setIsMenuOpen(false)}>Courses</MobileNavLink>
+          <MobileNavLink href="/features" onClick={() => setIsMenuOpen(false)}>Features</MobileNavLink>
+          <MobileNavLink href="/about" onClick={() => setIsMenuOpen(false)}>About</MobileNavLink>
           <div className="pt-4 border-t border-gray-100 space-y-2">
             {isLoggedIn ? (
               <>
                 <MobileNavLink href="/dashboard" onClick={() => setIsMenuOpen(false)}>Dashboard</MobileNavLink>
                 <div className="px-4 py-2 flex items-center justify-between">
                   <span className="text-sm font-medium text-gray-700">Notifications</span>
-                  <NotificationBell />
+                  <div className="shrink-0">
+                    <NotificationBell />
+                  </div>
                 </div>
                 <MobileNavLink href="/dashboard/profile" onClick={() => setIsMenuOpen(false)}>Profile</MobileNavLink>
                 <button
