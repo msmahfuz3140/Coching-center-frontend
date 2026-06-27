@@ -148,34 +148,65 @@ export default function AdminUsersPage() {
 
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            const ok = window.confirm('Block this user?')
-                            if (!ok) return
-                            setIsUpdating(user.id)
-                            try {
-                              const res = await fetch('/api/admin/users', {
-                                method: 'PATCH',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ userId: user.id, action: 'BLOCK' }),
-                              })
-                              const result = await res.json()
-                              if (!res.ok || !result.success) throw new Error(result.message || 'Failed to block')
-                              setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, isBlocked: true } : u)))
-                              toast.success('User blocked')
-                            } catch (err: any) {
-                              toast.error(err?.message || 'Failed to block')
-                            } finally {
-                              setIsUpdating(null)
-                            }
-                          }}
-                          disabled={isUpdating === user.id}
-                          className="px-3 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:bg-gray-300 disabled:text-gray-600 transition"
-                          aria-label={`Block ${user.email}`}
-                        >
-                          Block
-                        </button>
+                        {user.isBlocked ? (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const ok = window.confirm('Unblock this user?')
+                              if (!ok) return
+                              setIsUpdating(user.id)
+                              try {
+                                const res = await fetch('/api/admin/users', {
+                                  method: 'PATCH',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ userId: user.id, action: 'UNBLOCK' }),
+                                })
+                                const result = await res.json()
+                                if (!res.ok || !result.success) throw new Error(result.message || 'Failed to unblock')
+                                setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, isBlocked: false } : u)))
+                                toast.success('User unblocked')
+                              } catch (err: any) {
+                                toast.error(err?.message || 'Failed to unblock')
+                              } finally {
+                                setIsUpdating(null)
+                              }
+                            }}
+                            disabled={isUpdating === user.id}
+                            className="px-3 py-2 text-sm rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-300 disabled:text-gray-600 transition"
+                            aria-label={`Unblock ${user.email}`}
+                          >
+                            Unblock
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const ok = window.confirm('Block this user?')
+                              if (!ok) return
+                              setIsUpdating(user.id)
+                              try {
+                                const res = await fetch('/api/admin/users', {
+                                  method: 'PATCH',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({ userId: user.id, action: 'BLOCK' }),
+                                })
+                                const result = await res.json()
+                                if (!res.ok || !result.success) throw new Error(result.message || 'Failed to block')
+                                setUsers((prev) => prev.map((u) => (u.id === user.id ? { ...u, isBlocked: true } : u)))
+                                toast.success('User blocked')
+                              } catch (err: any) {
+                                toast.error(err?.message || 'Failed to block')
+                              } finally {
+                                setIsUpdating(null)
+                              }
+                            }}
+                            disabled={isUpdating === user.id}
+                            className="px-3 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:bg-gray-300 disabled:text-gray-600 transition"
+                            aria-label={`Block ${user.email}`}
+                          >
+                            Block
+                          </button>
+                        )}
 
                         <button
                           type="button"

@@ -42,6 +42,7 @@ model User {
   updatedAt     DateTime    @updatedAt
   role          Role        @default(STUDENT)
   phone         String?
+  isBlocked     Boolean     @default(false)
 
   sessions      Session[]
   accounts      Account[]
@@ -210,8 +211,8 @@ model Notice {
   // Relations
   authorId  String
   author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  courseId  String
-  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  courseId  String?
+  course    Course?  @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@map("notice")
 }

@@ -43,13 +43,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Title and content are required' }, { status: 400 })
     }
 
+    // courseId is optional - if empty string or not provided, set to null
+    const finalCourseId = courseId && courseId !== '' ? courseId : null
+
     const notice = await prisma.notice.create({
       data: {
         title,
         content,
         priority: priority || 'normal',
         authorId: session.user.id,
-        courseId: courseId || null,
+        courseId: finalCourseId,
       },
       include: {
         author: { select: { id: true, name: true, email: true } },
@@ -88,7 +91,10 @@ export async function PATCH(request: Request) {
     if (title) data.title = title
     if (content) data.content = content
     if (priority) data.priority = priority
-    if (courseId !== undefined) data.courseId = courseId || null
+    // Handle courseId - empty string means no course
+    if (courseId !== undefined) {
+      data.courseId = courseId && courseId !== '' ? courseId : null
+    }
 
     const notice = await prisma.notice.update({
       where: { id },
