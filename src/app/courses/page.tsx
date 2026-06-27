@@ -296,7 +296,7 @@ export default function CoursesPage() {
 
           {/* Floating Search */}
           <div className="absolute bottom-0 left-1/2 w-full max-w-3xl -translate-x-1/2 translate-y-1/2 px-5">
-            <div className="group relative">
+            <div className="group relative mb-25">
               <div className="absolute -inset-1 rounded-3xl bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 opacity-30 blur-2xl transition duration-500 group-hover:opacity-50" />
 
               <div className="relative flex items-center rounded-3xl border border-white/20 bg-white p-2 shadow-2xl">

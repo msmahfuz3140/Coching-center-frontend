@@ -11,7 +11,6 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('')
   const [otp, setOtp] = useState('')
   const [verificationEmail, setVerificationEmail] = useState('')
-  const [generatedOtp, setGeneratedOtp] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [isOtpStep, setIsOtpStep] = useState(false)
@@ -34,9 +33,8 @@ export default function RegisterPage() {
       }
 
       setVerificationEmail(result.email)
-      setGeneratedOtp(result.otp)
       setIsOtpStep(true)
-      toast.success('Account created. Enter the verification code to activate it.', {
+      toast.success('Verification code sent. Check your email inbox and spam folder.', {
         duration: 4000,
         position: 'top-right',
       })
@@ -93,8 +91,7 @@ export default function RegisterPage() {
       if (!response.ok || !result.success) {
         throw new Error(result.message || 'Failed to resend code')
       }
-      setGeneratedOtp(result.otp)
-      toast.success('A fresh verification code has been sent.', {
+      toast.success('A fresh verification code has been sent. Check your email.', {
         duration: 3000,
         position: 'top-right',
       })
@@ -126,7 +123,7 @@ export default function RegisterPage() {
             <form className="space-y-6" onSubmit={handleVerify}>
               <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-700">
                 <p className="font-semibold">Verification code sent to {verificationEmail}</p>
-                <p className="mt-1">For this demo, you can use the code below: <span className="font-mono font-bold">{generatedOtp}</span></p>
+                <p className="mt-1">Enter the 6-digit code from your email. If you do not see it, check spam or promotions.</p>
               </div>
               <div>
                 <label htmlFor="otp" className="block text-sm font-medium text-gray-700 mb-2">

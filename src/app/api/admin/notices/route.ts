@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { notifyEnrolledStudents } from '@/lib/notifyStudents'
 
 // GET /api/admin/notices - Get all notices
 export async function GET() {
@@ -123,11 +124,15 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: false, error: 'Notice ID is required' }, { status: 400 })
     }
 
-    const data: any = {}
+    const existingNotice = await prisma.notice.findUnique({ where: { id } })
+    if (!existingNotice) {
+      return NextResponse.json({ success: false, error: 'Notice not found' }, { status: 404 })
+    }
+
+    const data: Record<string, unknown> = {}
     if (title) data.title = title
     if (content) data.content = content
     if (priority) data.priority = priority
-    // Handle courseId - empty string means no course
     if (courseId !== undefined) {
       data.courseId = courseId && courseId !== '' ? courseId : null
     }
@@ -140,6 +145,40 @@ export async function PATCH(request: Request) {
         course: { select: { id: true, title: true } }
       }
     })
+
+    try {
+      const finalCourseId = notice.courseId
+      if (finalCourseId) {
+        await notifyEnrolledStudents({
+          courseId: finalCourseId,
+          type: 'notice',
+          title: `📢 Notice Updated: ${notice.title}`,
+          message: notice.course
+            ? `${notice.course.title}: ${notice.content.slice(0, 120)}${notice.content.length > 120 ? '…' : ''}`
+            : notice.content.slice(0, 120) + (notice.content.length > 120 ? '…' : ''),
+          excludeUserId: session.user.id,
+        })
+      } else {
+        const students = await prisma.user.findMany({
+          where: { role: 'STUDENT' },
+          select: { id: true },
+        })
+        const recipientIds = students.map((u) => u.id).filter((uid) => uid !== session.user.id)
+        if (recipientIds.length > 0) {
+          await prisma.notification.createMany({
+            data: recipientIds.map((userId) => ({
+              type: 'notice',
+              title: `📢 Notice Updated: ${notice.title}`,
+              message: notice.content.slice(0, 120) + (notice.content.length > 120 ? '…' : ''),
+              userId,
+              courseId: null,
+            })),
+          })
+        }
+      }
+    } catch (notifErr) {
+      console.error('Notice update notification error:', notifErr)
+    }
 
     return NextResponse.json({ success: true, notice })
   } catch (error) {

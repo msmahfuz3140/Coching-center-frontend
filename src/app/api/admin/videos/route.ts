@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { notifyEnrolledStudents } from '@/lib/notifyStudents'
 
 // GET /api/admin/videos?courseId=xxx - Get videos for a course
 export async function GET(request: Request) {
@@ -66,22 +67,14 @@ export async function POST(request: Request) {
 
     // ── Notify enrolled students ──
     try {
-      const enrollments = await prisma.enrollment.findMany({
-        where: { courseId, status: 'APPROVED' },
-        select: { userId: true }
+      const course = await prisma.course.findUnique({ where: { id: courseId }, select: { title: true } })
+      await notifyEnrolledStudents({
+        courseId,
+        type: 'video',
+        title: '🎬 New Video Added',
+        message: `"${title}" has been added to ${course?.title || 'your course'}`,
+        excludeUserId: session.user.id,
       })
-      if (enrollments.length > 0) {
-        const course = await prisma.course.findUnique({ where: { id: courseId }, select: { title: true } })
-        await prisma.notification.createMany({
-          data: enrollments.map(e => ({
-            type: 'video',
-            title: `🎬 New Video Added`,
-            message: `"${title}" has been added to ${course?.title || 'your course'}`,
-            userId: e.userId,
-            courseId,
-          }))
-        })
-      }
     } catch (notifErr) {
       console.error('Video notification error:', notifErr)
     }
@@ -125,6 +118,22 @@ export async function PATCH(request: Request) {
       where: { id },
       data: updateData
     })
+
+    try {
+      const course = await prisma.course.findUnique({
+        where: { id: video.courseId },
+        select: { title: true },
+      })
+      await notifyEnrolledStudents({
+        courseId: video.courseId,
+        type: 'video',
+        title: '🎬 Video Updated',
+        message: `"${video.title}" was updated in ${course?.title || 'your course'}`,
+        excludeUserId: session.user.id,
+      })
+    } catch (notifErr) {
+      console.error('Video update notification error:', notifErr)
+    }
 
     return NextResponse.json(video)
   } catch (error) {

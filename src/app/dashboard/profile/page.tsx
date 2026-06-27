@@ -29,6 +29,15 @@ type AdminStats = {
   pendingEnrollments: number
 }
 
+type AppNotification = {
+  id: string
+  type: string
+  title: string
+  message: string
+  isRead: boolean
+  createdAt: string
+}
+
 export default function ProfilePage() {
   const router = useRouter()
   const [user, setUser] = useState<SessionUser | null>(null)
@@ -42,6 +51,8 @@ export default function ProfilePage() {
     pendingCount: 0,
   })
   const [adminStats, setAdminStats] = useState<AdminStats | null>(null)
+  const [unreadNotifications, setUnreadNotifications] = useState(0)
+  const [recentNotifications, setRecentNotifications] = useState<AppNotification[]>([])
   const [isChangingPassword, setIsChangingPassword] = useState(false)
   const [oldPassword, setOldPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -101,6 +112,13 @@ export default function ProfilePage() {
             completedCount: enrollments.filter((e) => e.status === 'COMPLETED').length,
             pendingCount: enrollments.filter((e) => e.status === 'PENDING').length,
           })
+
+          const notifRes = await fetch('/api/notifications?limit=5')
+          if (notifRes.ok) {
+            const notifData = await notifRes.json()
+            setUnreadNotifications(notifData.unreadCount || 0)
+            setRecentNotifications(notifData.notifications || [])
+          }
         }
       } catch (err) {
         console.error(err)
@@ -309,7 +327,7 @@ export default function ProfilePage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[
               { label: 'Active Courses', value: enrollmentStats.enrolledCount, color: 'from-blue-500 to-blue-600', icon: '📘' },
-              { label: 'Completed', value: enrollmentStats.completedCount, color: 'from-emerald-500 to-green-600', icon: '🏆' },
+              { label: 'Unread Notifications', value: unreadNotifications, color: 'from-red-500 to-rose-600', icon: '🔔' },
               { label: 'Pending Enrollment', value: enrollmentStats.pendingCount, color: 'from-amber-500 to-orange-500', icon: '⏳' },
             ].map((s) => (
               <div key={s.label} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 text-center">
@@ -348,6 +366,43 @@ export default function ProfilePage() {
                 ))}
               </div>
             </div>
+
+            {!isAdmin && (
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                    <span className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-base">🔔</span>
+                    Notifications
+                    {unreadNotifications > 0 && (
+                      <span className="px-2 py-0.5 bg-red-500 text-white text-xs font-bold rounded-full">
+                        {unreadNotifications} unread
+                      </span>
+                    )}
+                  </h2>
+                  <a href="/dashboard/notifications" className="text-sm font-semibold text-blue-600 hover:text-blue-700">
+                    View all
+                  </a>
+                </div>
+                {recentNotifications.length === 0 ? (
+                  <p className="text-sm text-gray-500">No notifications yet.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {recentNotifications.map((n) => (
+                      <a
+                        key={n.id}
+                        href="/dashboard/notifications"
+                        className={`block p-3 rounded-xl border transition-colors ${
+                          !n.isRead ? 'bg-blue-50 border-blue-100' : 'border-gray-100 hover:bg-gray-50'
+                        }`}
+                      >
+                        <p className={`text-sm font-semibold ${!n.isRead ? 'text-gray-900' : 'text-gray-600'}`}>{n.title}</p>
+                        <p className="text-xs text-gray-500 mt-1 line-clamp-2">{n.message}</p>
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Quick Actions */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
@@ -401,6 +456,20 @@ export default function ProfilePage() {
                       <div>
                         <p className="text-sm font-semibold text-gray-800 group-hover:text-purple-700">Assignments</p>
                         <p className="text-xs text-gray-500">Check your tasks</p>
+                      </div>
+                    </a>
+                    <a href="/dashboard/notifications" className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 hover:border-red-300 hover:bg-red-50 transition-all group">
+                      <span className="text-xl">🔔</span>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-800 group-hover:text-red-700">
+                          Notifications
+                          {unreadNotifications > 0 && (
+                            <span className="ml-2 px-1.5 py-0.5 bg-red-500 text-white text-[10px] rounded-full">
+                              {unreadNotifications}
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-xs text-gray-500">Course updates & alerts</p>
                       </div>
                     </a>
                     <a href="/dashboard/notices" className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 hover:border-amber-300 hover:bg-amber-50 transition-all group">

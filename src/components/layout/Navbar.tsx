@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { authClient } from '@/lib/auth-client'
+import NotificationBell from '@/components/NotificationBell'
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -81,6 +82,7 @@ export default function Navbar() {
                 >
                   Dashboard
                 </Link>
+                <NotificationBell />
                 <Link
                   href="/dashboard/profile"
                   className="flex items-center space-x-2 px-3 py-2 text-sm font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200 group"
@@ -154,6 +156,10 @@ export default function Navbar() {
             {isLoggedIn ? (
               <>
                 <MobileNavLink href="/dashboard" onClick={() => setIsMenuOpen(false)}>Dashboard</MobileNavLink>
+                <div className="px-4 py-2 flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-700">Notifications</span>
+                  <NotificationBell />
+                </div>
                 <MobileNavLink href="/dashboard/profile" onClick={() => setIsMenuOpen(false)}>Profile</MobileNavLink>
                 <button
                   onClick={() => { handleLogout(); setIsMenuOpen(false) }}

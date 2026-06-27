@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { hashPassword } from '@better-auth/utils/password'
 import { prisma } from '@/lib/prisma'
+import { sendVerificationEmail } from '@/lib/email'
 
 function createOtp() {
   return Math.floor(100000 + Math.random() * 900000).toString()
@@ -62,7 +63,15 @@ export async function POST(request: Request) {
         },
       })
 
-      return NextResponse.json({ success: true, message: 'Verification code sent to your email.', email: normalizedEmail, otp })
+      const emailSent = await sendVerificationEmail(normalizedEmail, otp)
+      if (!emailSent) {
+        return NextResponse.json(
+          { success: false, message: 'Failed to send verification email. Please try again.' },
+          { status: 503 }
+        )
+      }
+
+      return NextResponse.json({ success: true, message: 'Verification code sent to your email.', email: normalizedEmail })
     }
 
     const user = await prisma.user.create({
@@ -92,7 +101,15 @@ export async function POST(request: Request) {
       },
     })
 
-    return NextResponse.json({ success: true, message: 'Verification code sent to your email.', email: normalizedEmail, otp })
+    const emailSent = await sendVerificationEmail(normalizedEmail, otp)
+    if (!emailSent) {
+      return NextResponse.json(
+        { success: false, message: 'Failed to send verification email. Please try again.' },
+        { status: 503 }
+      )
+    }
+
+    return NextResponse.json({ success: true, message: 'Verification code sent to your email.', email: normalizedEmail })
   } catch (error) {
     console.error('Registration error', error)
     return NextResponse.json(

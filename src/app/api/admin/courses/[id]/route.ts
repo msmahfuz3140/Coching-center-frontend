@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { notifyEnrolledStudents } from '@/lib/notifyStudents'
 
 // GET /api/admin/courses/[id] - Get single course
 export async function GET(
@@ -128,6 +129,30 @@ export async function PATCH(
         }
       }
     })
+
+    try {
+      const changedFields: string[] = []
+      if (title && title !== existingCourse.title) changedFields.push('title')
+      if (description && description !== existingCourse.description) changedFields.push('description')
+      if (thumbnail && thumbnail !== existingCourse.thumbnail) changedFields.push('thumbnail')
+      if (isPublished !== undefined && isPublished !== existingCourse.isPublished) {
+        changedFields.push(isPublished ? 'published' : 'unpublished')
+      }
+      if (price !== undefined && price !== existingCourse.price) changedFields.push('price')
+      if (duration && duration !== existingCourse.duration) changedFields.push('duration')
+
+      if (changedFields.length > 0) {
+        await notifyEnrolledStudents({
+          courseId: params.id,
+          type: 'course_update',
+          title: '📚 Course Updated',
+          message: `"${course.title}" has been updated (${changedFields.slice(0, 3).join(', ')})`,
+          excludeUserId: session.user.id,
+        })
+      }
+    } catch (notifErr) {
+      console.error('Course update notification error:', notifErr)
+    }
 
     return NextResponse.json(course)
   } catch (error) {

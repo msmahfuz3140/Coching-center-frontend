@@ -26,7 +26,7 @@ export default function ForgotPasswordPage() {
         throw new Error(result.message || 'Failed to send reset code')
       }
       setStep('reset')
-      toast.success('Reset code sent. Use the code shown in the console for this demo.', { duration: 4000, position: 'top-right' })
+      toast.success('If that email exists, a reset code has been sent. Check your inbox and spam folder.', { duration: 4000, position: 'top-right' })
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to send reset code', { duration: 5000, position: 'top-right' })
     } finally {

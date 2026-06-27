@@ -26,6 +26,7 @@ function timeAgo(d: string) {
 const typeIcon: Record<string, string> = {
   notice:               '📢',
   video:                '🎬',
+  course_update:        '📚',
   enrollment_approved:  '✅',
   enrollment_rejected:  '❌',
 }
@@ -52,7 +53,7 @@ export default function NotificationBell() {
   // Initial load + polling every 30 seconds
   useEffect(() => {
     fetchNotifications()
-    const interval = setInterval(fetchNotifications, 30000)
+    const interval = setInterval(fetchNotifications, 15000)
     return () => clearInterval(interval)
   }, [fetchNotifications])
 
@@ -193,12 +194,13 @@ export default function NotificationBell() {
           {/* Footer */}
           {notifications.length > 0 && (
             <div className="px-4 py-3 bg-gray-50 border-t border-gray-100 text-center">
-              <button
+              <Link
+                href="/dashboard/notifications"
                 onClick={() => setIsOpen(false)}
                 className="text-xs text-blue-600 font-semibold hover:text-blue-700"
               >
-                Close
-              </button>
+                View all notifications
+              </Link>
             </div>
           )}
         </div>

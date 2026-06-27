@@ -28,6 +28,16 @@ interface Enrollment {
   }
 }
 
+interface AppNotification {
+  id: string
+  type: string
+  title: string
+  message: string
+  isRead: boolean
+  createdAt: string
+  course: { id: string; title: string; slug: string } | null
+}
+
 interface SessionUser {
   id: string
   name?: string | null
@@ -67,6 +77,8 @@ export default function DashboardPage() {
   const router = useRouter()
   const [user, setUser] = useState<SessionUser | null>(null)
   const [notices, setNotices] = useState<Notice[]>([])
+  const [notifications, setNotifications] = useState<AppNotification[]>([])
+  const [unreadCount, setUnreadCount] = useState(0)
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [currentTime, setCurrentTime] = useState(new Date())
@@ -83,15 +95,19 @@ export default function DashboardPage() {
         if (!data) { router.push('/login'); return }
         setUser(data.user as SessionUser)
 
-        const [noticeRes, enrollRes] = await Promise.all([
+        const [noticeRes, enrollRes, notifRes] = await Promise.all([
           fetch('/api/notices'),
           fetch('/api/enrollments'),
+          fetch('/api/notifications?limit=5'),
         ])
         const noticeData = await noticeRes.json()
         const enrollData = await enrollRes.json()
+        const notifData = notifRes.ok ? await notifRes.json() : { notifications: [], unreadCount: 0 }
 
         if (noticeData.success) setNotices(noticeData.notices.slice(0, 4))
         if (Array.isArray(enrollData)) setEnrollments(enrollData.filter((e: Enrollment) => e.status === 'APPROVED').slice(0, 4))
+        setNotifications(notifData.notifications || [])
+        setUnreadCount(notifData.unreadCount || 0)
       } catch (err) {
         console.error(err)
       } finally {
@@ -134,8 +150,8 @@ export default function DashboardPage() {
       href: '/courses',
     },
     {
-      label: 'Recent Notices',
-      value: notices.length,
+      label: 'Unread Notifications',
+      value: unreadCount,
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
@@ -144,12 +160,26 @@ export default function DashboardPage() {
       gradient: 'from-purple-500 to-pink-500',
       bg: 'bg-purple-50',
       text: 'text-purple-600',
+      href: '/dashboard/notifications',
+    },
+    {
+      label: 'Recent Notices',
+      value: notices.length,
+      icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        </svg>
+      ),
+      gradient: 'from-rose-500 to-red-500',
+      bg: 'bg-rose-50',
+      text: 'text-rose-600',
       href: '/dashboard/notices',
     },
   ]
 
   const quickActions = [
     { href: '/dashboard/courses',     icon: '📘', label: 'My Courses',    desc: 'View enrolled courses',        color: 'hover:border-blue-300 hover:bg-blue-50 group-hover:text-blue-600' },
+    { href: '/dashboard/notifications', icon: '🔔', label: 'Notifications', desc: unreadCount > 0 ? `${unreadCount} unread updates` : 'Course updates & alerts', color: 'hover:border-red-300 hover:bg-red-50 group-hover:text-red-600' },
     { href: '/dashboard/assignments', icon: '📝', label: 'Assignments',   desc: 'Check pending tasks',          color: 'hover:border-purple-300 hover:bg-purple-50 group-hover:text-purple-600' },
     { href: '/dashboard/notices',     icon: '🔔', label: 'Notices',       desc: 'View announcements',           color: 'hover:border-amber-300 hover:bg-amber-50 group-hover:text-amber-600' },
     { href: '/courses',               icon: '🔍', label: 'Browse Courses', desc: 'Explore & enroll in courses', color: 'hover:border-emerald-300 hover:bg-emerald-50 group-hover:text-emerald-600' },
@@ -221,7 +251,7 @@ export default function DashboardPage() {
         </div>
 
         {/* ── Stats Row ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {stats.map((s) => (
             <Link key={s.label} href={s.href} className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg transition-all p-6 flex items-center gap-5">
               <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${s.gradient} flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform flex-shrink-0`}>
@@ -286,6 +316,48 @@ export default function DashboardPage() {
                         Continue
                       </Link>
                     </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Recent Notifications */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900">🔔 Recent Notifications</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    {unreadCount > 0 ? `${unreadCount} unread — read to clear badge` : 'Latest course updates'}
+                  </p>
+                </div>
+                <Link href="/dashboard/notifications" className="text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1">
+                  View all
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                </Link>
+              </div>
+
+              {notifications.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 text-center">
+                  <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-2xl mb-3">🔔</div>
+                  <p className="text-gray-500 text-sm">No notifications yet</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {notifications.map((n) => (
+                    <Link
+                      key={n.id}
+                      href="/dashboard/notifications"
+                      className={`flex items-start gap-3 p-4 rounded-xl transition-colors border ${
+                        !n.isRead ? 'bg-blue-50 border-blue-100' : 'bg-gray-50 border-transparent hover:border-gray-200'
+                      }`}
+                    >
+                      <span className="text-lg flex-shrink-0">{n.type === 'video' ? '🎬' : n.type === 'notice' ? '📢' : n.type === 'course_update' ? '📚' : '🔔'}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className={`text-sm font-semibold truncate ${!n.isRead ? 'text-gray-900' : 'text-gray-600'}`}>{n.title}</p>
+                        <p className="text-xs text-gray-400 mt-0.5 truncate">{n.message}</p>
+                      </div>
+                      {!n.isRead && <span className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0" />}
+                    </Link>
                   ))}
                 </div>
               )}
