@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { authClient } from '@/lib/auth-client'
 import DashboardLayout from '@/components/layout/DashboardLayout'
@@ -11,30 +11,29 @@ interface Enrollment {
   userId: string
   courseId: string
   enrolledAt: string
-  completedAt: string | null
-  progress: number
   status: 'PENDING' | 'APPROVED' | 'REJECTED'
   requestMessage: string | null
   responseMessage: string | null
-  reviewedAt: string | null
-  user: {
-    id: string
-    name: string | null
-    email: string
-  }
-  course: {
-    id: string
-    title: string
-    slug: string
-    category: string
-  }
+  user: { id: string; name: string | null; email: string }
+  course: { id: string; title: string; slug: string; category: string }
+}
+
+const STATUS_META = {
+  PENDING:  { label: 'Pending',  color: 'bg-amber-100 text-amber-700 border border-amber-200',   dot: 'bg-amber-500',   icon: '⏳' },
+  APPROVED: { label: 'Approved', color: 'bg-emerald-100 text-emerald-700 border border-emerald-200', dot: 'bg-emerald-500', icon: '✅' },
+  REJECTED: { label: 'Rejected', color: 'bg-red-100 text-red-700 border border-red-200',         dot: 'bg-red-500',    icon: '❌' },
+}
+
+function fmt(d: string) {
+  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 export default function AdminEnrollmentsPage() {
-  const [session, setSession] = useState<any>(null)
+  const [session, setSession] = useState<unknown>(null)
   const [pageLoading, setPageLoading] = useState(true)
   const [enrollments, setEnrollments] = useState<Enrollment[]>([])
   const [statusFilter, setStatusFilter] = useState<string>('')
+  const [search, setSearch] = useState('')
   const [processingId, setProcessingId] = useState<string | null>(null)
   const [showModal, setShowModal] = useState<Enrollment | null>(null)
   const [modalAction, setModalAction] = useState<'approve' | 'reject' | null>(null)
@@ -46,39 +45,43 @@ export default function AdminEnrollmentsPage() {
       try {
         const { data } = await authClient.getSession()
         if (!data) { router.push('/login'); return }
-        if ((data.user as { role?: string } | undefined)?.role !== 'ADMIN') { router.push('/dashboard'); return }
+        if ((data.user as { role?: string })?.role !== 'ADMIN') { router.push('/dashboard'); return }
         setSession(data)
-      } catch (error) {
-        console.error(error)
-      } finally {
-        setPageLoading(false)
-      }
+      } catch (e) { console.error(e) }
+      finally { setPageLoading(false) }
     }
     init()
   }, [router])
 
   useEffect(() => {
     if (!session) return
-
-    async function fetchEnrollments() {
+    async function load() {
       try {
-        const token = session.token || ''
-        let url = '/api/admin/enrollments'
-        if (statusFilter) url += `?status=${statusFilter}`
-        
-        const res = await fetch(url, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-        if (!res.ok) throw new Error('Failed to fetch')
-        const data = await res.json()
-        setEnrollments(data)
-      } catch (error) {
-        toast.error('Failed to load enrollments')
-        console.error(error)
-      }
+        const url = statusFilter ? `/api/admin/enrollments?status=${statusFilter}` : '/api/admin/enrollments'
+        const res = await fetch(url)
+        if (!res.ok) throw new Error('Failed')
+        setEnrollments(await res.json())
+      } catch { toast.error('Failed to load enrollments') }
     }
-    fetchEnrollments()
+    load()
   }, [session, statusFilter])
+
+  const filtered = useMemo(() => {
+    if (!search) return enrollments
+    const s = search.toLowerCase()
+    return enrollments.filter(e =>
+      e.user.name?.toLowerCase().includes(s) ||
+      e.user.email.toLowerCase().includes(s) ||
+      e.course.title.toLowerCase().includes(s)
+    )
+  }, [enrollments, search])
+
+  const stats = useMemo(() => ({
+    total: enrollments.length,
+    pending: enrollments.filter(e => e.status === 'PENDING').length,
+    approved: enrollments.filter(e => e.status === 'APPROVED').length,
+    rejected: enrollments.filter(e => e.status === 'REJECTED').length,
+  }), [enrollments])
 
   const handleProcess = async () => {
     if (!showModal || !modalAction) return
@@ -86,279 +89,229 @@ export default function AdminEnrollmentsPage() {
     try {
       const res = await fetch('/api/admin/enrollments', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session?.token || ''}`
-        },
-        body: JSON.stringify({
-          enrollmentId: showModal.id,
-          status: modalAction === 'approve' ? 'APPROVED' : 'REJECTED',
-          responseMessage: responseText || undefined
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enrollmentId: showModal.id, status: modalAction === 'approve' ? 'APPROVED' : 'REJECTED', responseMessage: responseText || undefined })
       })
-      
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      
       toast.success(data.message)
-      setShowModal(null)
-      setModalAction(null)
-      setResponseText('')
-    } catch (error: any) {
-      toast.error(error.message)
-    } finally {
-      setProcessingId(null)
-    }
+      setEnrollments(prev => prev.map(e => e.id === showModal.id ? { ...e, status: modalAction === 'approve' ? 'APPROVED' : 'REJECTED', responseMessage: responseText } : e))
+      setShowModal(null); setModalAction(null); setResponseText('')
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : 'Failed') }
+    finally { setProcessingId(null) }
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this enrollment record?')) return
+    if (!confirm('Delete this enrollment record?')) return
     try {
-      const res = await fetch(`/api/admin/enrollments?id=${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${session?.token || ''}` }
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
+      const res = await fetch(`/api/admin/enrollments?id=${id}`, { method: 'DELETE' })
+      const d = await res.json()
+      if (!res.ok) throw new Error(d.error)
+      setEnrollments(prev => prev.filter(e => e.id !== id))
       toast.success('Enrollment deleted')
-    } catch (error: any) {
-      toast.error(error.message)
-    }
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : 'Failed') }
   }
 
-  const getStatusBadgeClass = (status: string) => {
-    switch (status) {
-      case 'APPROVED': return 'bg-green-100 text-green-800'
-      case 'REJECTED': return 'bg-red-100 text-red-800'
-      case 'PENDING': return 'bg-yellow-100 text-yellow-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  if (pageLoading) {
-    return (
-      <DashboardLayout>
-        <div className="flex items-center justify-center py-20">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+  if (pageLoading) return (
+    <DashboardLayout>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-14 h-14 rounded-full border-4 border-indigo-600/20 border-t-indigo-600 animate-spin" />
+          <p className="text-gray-500 font-medium">Loading enrollments…</p>
         </div>
-      </DashboardLayout>
-    )
-  }
+      </div>
+    </DashboardLayout>
+  )
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Enrollments</h1>
-          <p className="text-gray-600 mt-1">Track and manage student enrollment requests</p>
-        </div>
+      <div className="space-y-6 max-w-7xl mx-auto">
 
-        {/* Filters */}
-        <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
-          <div className="p-6 border-b border-gray-100">
-            <div className="flex space-x-4">
-              <select
-                className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                aria-label="Filter by enrollment status"
-              >
-                <option value="">All Status</option>
-                <option value="PENDING">Pending</option>
-                <option value="APPROVED">Approved</option>
-                <option value="REJECTED">Rejected</option>
-              </select>
+        {/* Header */}
+        <div className="relative rounded-3xl overflow-hidden shadow-xl" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #4f46e5 100%)' }}>
+          <div className="absolute -top-12 -right-12 w-56 h-56 rounded-full bg-white/5" />
+          <div className="absolute -bottom-16 -left-8 w-64 h-64 rounded-full bg-white/5" />
+          <div className="relative px-8 py-7 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
+            <div>
+              <p className="text-indigo-300 text-sm font-medium">Admin Panel</p>
+              <h1 className="mt-1 text-2xl sm:text-3xl font-extrabold text-white">Enrollments</h1>
+              <p className="mt-1 text-indigo-200 text-sm">Review, approve or reject student enrollment requests</p>
+            </div>
+            <div className="flex gap-3 flex-wrap">
+              {[
+                { label: 'Total', value: stats.total, cls: 'bg-white/15 text-white' },
+                { label: 'Pending', value: stats.pending, cls: 'bg-amber-500/30 text-amber-200' },
+                { label: 'Approved', value: stats.approved, cls: 'bg-emerald-500/30 text-emerald-200' },
+                { label: 'Rejected', value: stats.rejected, cls: 'bg-red-500/30 text-red-200' },
+              ].map(s => (
+                <div key={s.label} className={`px-4 py-2 rounded-2xl ${s.cls} text-center min-w-[68px]`}>
+                  <p className="text-xl font-black">{s.value}</p>
+                  <p className="text-xs font-medium opacity-80">{s.label}</p>
+                </div>
+              ))}
             </div>
           </div>
+        </div>
 
-          {enrollments.length === 0 ? (
-            <div className="p-12 text-center">
-              <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                {statusFilter ? `No ${statusFilter.toLowerCase()} enrollments` : 'No Enrollments Yet'}
-              </h3>
-              <p className="text-gray-600">
-                {statusFilter ? 'No enrollments match the current filter' : 'Enrollments will appear here once students request course access'}
-              </p>
+        {/* Pending alert */}
+        {stats.pending > 0 && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-6 py-4 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">⏳</span>
+              <div>
+                <p className="font-bold text-amber-900 text-sm">{stats.pending} request{stats.pending !== 1 ? 's' : ''} awaiting review</p>
+                <p className="text-xs text-amber-700">Review and take action below</p>
+              </div>
             </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Course</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {enrollments.map((enrollment) => (
-                    <tr key={enrollment.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {enrollment.user.name || 'Unknown'}
+            <button onClick={() => setStatusFilter('PENDING')} className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-xl transition">Show Pending</button>
+          </div>
+        )}
+
+        {/* Filters */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            <input type="text" placeholder="Search student or course…" value={search} onChange={e => setSearch(e.target.value)} className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {[{ v: '', l: 'All' }, { v: 'PENDING', l: '⏳ Pending' }, { v: 'APPROVED', l: '✅ Approved' }, { v: 'REJECTED', l: '❌ Rejected' }].map(opt => (
+              <button key={opt.v} onClick={() => setStatusFilter(opt.v)} className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${statusFilter === opt.v ? 'bg-indigo-600 text-white shadow-md' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+                {opt.l}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50/60">
+                  {['Student', 'Course', 'Requested', 'Status', 'Message', 'Actions'].map((h, i) => (
+                    <th key={h} className={`px-6 py-4 text-xs font-bold text-gray-500 uppercase tracking-wider ${i === 5 ? 'text-right' : 'text-left'}`}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {filtered.length === 0 ? (
+                  <tr><td colSpan={6} className="text-center py-16">
+                    <div className="flex flex-col items-center gap-3 text-gray-400">
+                      <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center text-3xl">📋</div>
+                      <p className="font-semibold text-gray-600">No enrollments found</p>
+                      <p className="text-sm">Try adjusting the filter or search</p>
+                    </div>
+                  </td></tr>
+                ) : filtered.map(e => {
+                  const meta = STATUS_META[e.status]
+                  return (
+                    <tr key={e.id} className="hover:bg-gray-50/60 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                            {e.user.name?.charAt(0)?.toUpperCase() || 'U'}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-900 text-sm">{e.user.name || 'Unknown'}</p>
+                            <p className="text-xs text-gray-400 truncate max-w-[140px]">{e.user.email}</p>
+                          </div>
                         </div>
-                        <div className="text-sm text-gray-500">{enrollment.user.email}</div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{enrollment.course.title}</div>
-                        <div className="text-xs text-gray-500">{enrollment.course.category}</div>
+                      <td className="px-6 py-4">
+                        <p className="text-sm font-semibold text-gray-900 line-clamp-1">{e.course.title}</p>
+                        <p className="text-xs text-gray-400">{e.course.category}</p>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(enrollment.enrolledAt).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadgeClass(enrollment.status)}`}>
-                          {enrollment.status}
+                      <td className="px-6 py-4 text-xs text-gray-400 whitespace-nowrap">{fmt(e.enrolledAt)}</td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${meta.color}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${meta.dot}`} />
+                          {meta.label}
                         </span>
-                        {enrollment.requestMessage && (
-                          <div className="mt-1 text-xs text-gray-400 italic truncate max-w-[150px]">
-                            &ldquo;{enrollment.requestMessage}&rdquo;
-                          </div>
-                        )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        {enrollment.status === 'PENDING' ? (
-                          <div className="flex justify-end gap-2">
+                      <td className="px-6 py-4 max-w-[160px]">
+                        {e.requestMessage && <p className="text-xs text-gray-500 italic truncate">"{e.requestMessage}"</p>}
+                        {e.responseMessage && <p className="text-xs text-indigo-500 truncate mt-0.5">↳ {e.responseMessage}</p>}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          {e.status === 'PENDING' ? (
+                            <>
+                              <button
+                                onClick={() => { setShowModal(e); setModalAction('approve'); setResponseText('') }}
+                                disabled={processingId === e.id}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl transition disabled:opacity-50"
+                              >✅ Approve</button>
+                              <button
+                                onClick={() => { setShowModal(e); setModalAction('reject'); setResponseText('') }}
+                                disabled={processingId === e.id}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-xl transition disabled:opacity-50"
+                              >❌ Reject</button>
+                            </>
+                          ) : (
                             <button
-                              onClick={() => { setShowModal(enrollment); setModalAction('approve'); setResponseText('') }}
-                              disabled={processingId === enrollment.id}
-                              className="px-3 py-1 bg-green-600 text-white rounded-lg text-xs hover:bg-green-700 disabled:bg-gray-400 transition"
-                              aria-label={`Approve enrollment for ${enrollment.user.email}`}
+                              onClick={() => handleDelete(e.id)}
+                              className="p-2 rounded-xl border border-red-200 hover:bg-red-50 text-red-500 hover:text-red-600 transition"
+                              title="Delete"
                             >
-                              {processingId === enrollment.id ? '...' : 'Approve'}
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                             </button>
-                            <button
-                              onClick={() => { setShowModal(enrollment); setModalAction('reject'); setResponseText('') }}
-                              disabled={processingId === enrollment.id}
-                              className="px-3 py-1 bg-red-600 text-white rounded-lg text-xs hover:bg-red-700 disabled:bg-gray-400 transition"
-                              aria-label={`Reject enrollment for ${enrollment.user.email}`}
-                            >
-                              {processingId === enrollment.id ? '...' : 'Reject'}
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex justify-end gap-2">
-                            {enrollment.responseMessage && (
-                              <span
-                                className="text-xs text-gray-400 cursor-pointer hover:text-gray-600"
-                                title={enrollment.responseMessage}
-                              >
-                                Response
-                              </span>
-                            )}
-                            <button
-                              onClick={() => handleDelete(enrollment.id)}
-                              className="px-3 py-1 bg-gray-100 text-gray-600 rounded-lg text-xs hover:bg-gray-200 transition"
-                              aria-label={`Delete enrollment record for ${enrollment.user.email}`}
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+          {filtered.length > 0 && (
+            <div className="px-6 py-3 border-t border-gray-100 bg-gray-50/40 text-xs text-gray-400">
+              Showing {filtered.length} of {enrollments.length} enrollments
             </div>
           )}
         </div>
-
-        {/* Stats Cards */}
-        {enrollments.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-              <p className="text-2xl font-bold text-yellow-700">
-                {enrollments.filter(e => e.status === 'PENDING').length}
-              </p>
-              <p className="text-sm text-yellow-600">Pending Requests</p>
-            </div>
-            <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-              <p className="text-2xl font-bold text-green-700">
-                {enrollments.filter(e => e.status === 'APPROVED').length}
-              </p>
-              <p className="text-sm text-green-600">Approved Enrollments</p>
-            </div>
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4">
-              <p className="text-2xl font-bold text-red-700">
-                {enrollments.filter(e => e.status === 'REJECTED').length}
-              </p>
-              <p className="text-sm text-red-600">Rejected Enrollments</p>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Approval/Rejection Modal */}
+      {/* Approve / Reject Modal */}
       {showModal && modalAction && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md mx-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900">
-                {modalAction === 'approve' ? 'Approve Enrollment' : 'Reject Enrollment'}
-              </h3>
-              <button
-                onClick={() => { setShowModal(null); setModalAction(null) }}
-                className="text-gray-400 hover:text-gray-600"
-                aria-label="Close modal"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between" style={{ background: modalAction === 'approve' ? 'linear-gradient(135deg, #064e3b, #059669)' : 'linear-gradient(135deg, #7f1d1d, #dc2626)' }}>
+              <div>
+                <h3 className="text-lg font-bold text-white">{modalAction === 'approve' ? '✅ Approve Enrollment' : '❌ Reject Enrollment'}</h3>
+                <p className="text-sm text-white/70 mt-0.5">{showModal.user.name || showModal.user.email}</p>
+              </div>
+              <button onClick={() => { setShowModal(null); setModalAction(null) }} className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center">✕</button>
             </div>
-            
-            <div className="mb-4">
-              <p className="text-sm text-gray-600 mb-2">
-                <strong>Student:</strong> {showModal.user.name || showModal.user.email}
-              </p>
-              <p className="text-sm text-gray-600 mb-2">
-                <strong>Course:</strong> {showModal.course.title}
-              </p>
-              {showModal.requestMessage && (
-                <div className="bg-gray-50 p-3 rounded-lg mt-2">
-                  <p className="text-xs text-gray-500 mb-1">Student Message:</p>
-                  <p className="text-sm text-gray-700">{showModal.requestMessage}</p>
-                </div>
-              )}
+            <div className="p-6 space-y-4">
+              <div className="bg-gray-50 rounded-xl p-4 text-sm space-y-2">
+                <p className="text-gray-600"><span className="font-semibold text-gray-800">Course:</span> {showModal.course.title}</p>
+                {showModal.requestMessage && (
+                  <div className="border-t border-gray-200 pt-2 mt-2">
+                    <p className="text-xs text-gray-400 mb-1">Student&apos;s message:</p>
+                    <p className="text-gray-700 italic">&ldquo;{showModal.requestMessage}&rdquo;</p>
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Response Message <span className="text-gray-400 font-normal">(optional)</span></label>
+                <textarea
+                  rows={3}
+                  value={responseText}
+                  onChange={e => setResponseText(e.target.value)}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                  placeholder={modalAction === 'approve' ? 'Welcome to the course!' : 'Reason for rejection…'}
+                />
+              </div>
             </div>
-
-            <div className="mb-4">
-              <label htmlFor="responseMessage" className="block text-sm font-medium text-gray-700 mb-2">
-                Response Message (optional)
-              </label>
-              <textarea
-                id="responseMessage"
-                value={responseText}
-                onChange={(e) => setResponseText(e.target.value)}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder={modalAction === 'approve' ? 'Approved! Welcome to the course.' : 'Your request has been denied.'}
-              />
-            </div>
-
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => { setShowModal(null); setModalAction(null) }}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
-              >
-                Cancel
-              </button>
+            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/60 flex gap-3">
+              <button onClick={() => { setShowModal(null); setModalAction(null) }} className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-700 font-semibold text-sm hover:bg-gray-100 transition">Cancel</button>
               <button
                 onClick={handleProcess}
                 disabled={processingId === showModal.id}
-                className={`px-4 py-2 text-white rounded-lg transition disabled:bg-gray-400 ${
-                  modalAction === 'approve' 
-                    ? 'bg-green-600 hover:bg-green-700' 
-                    : 'bg-red-600 hover:bg-red-700'
-                }`}
+                className={`flex-1 py-2.5 rounded-xl text-white font-semibold text-sm transition disabled:opacity-50 ${modalAction === 'approve' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}`}
               >
-                {processingId === showModal.id ? 'Processing...' : `Yes, ${modalAction === 'approve' ? 'Approve' : 'Reject'}`}
+                {processingId === showModal.id ? 'Processing…' : modalAction === 'approve' ? 'Yes, Approve' : 'Yes, Reject'}
               </button>
             </div>
           </div>
