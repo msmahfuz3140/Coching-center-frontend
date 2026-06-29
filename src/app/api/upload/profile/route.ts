@@ -1,8 +1,13 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
-import { writeFile, mkdir } from 'fs/promises'
-import { join } from 'path'
-import { existsSync } from 'fs'
+import { v2 as cloudinary } from 'cloudinary'
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+})
 
 export async function POST(request: Request) {
   try {
@@ -10,6 +15,19 @@ export async function POST(request: Request) {
     const session = await auth.api.getSession({ headers: request.headers })
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Check Cloudinary config
+    if (
+      !process.env.CLOUDINARY_CLOUD_NAME ||
+      !process.env.CLOUDINARY_API_KEY ||
+      !process.env.CLOUDINARY_API_SECRET
+    ) {
+      console.error('Cloudinary credentials missing in .env')
+      return NextResponse.json(
+        { error: 'Image upload service not configured. Please contact admin.' },
+        { status: 500 }
+      )
     }
 
     const formData = await request.formData()
@@ -22,7 +40,10 @@ export async function POST(request: Request) {
     // Validate file type
     const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif']
     if (!allowedTypes.includes(file.type)) {
-      return NextResponse.json({ error: 'Only image files are allowed (jpg, png, webp, gif)' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'Only image files are allowed (jpg, png, webp, gif)' },
+        { status: 400 }
+      )
     }
 
     // Validate file size (max 5MB)
@@ -30,22 +51,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'File size must be less than 5MB' }, { status: 400 })
     }
 
-    // Create uploads dir if not exists
-    const uploadsDir = join(process.cwd(), 'public', 'uploads')
-    if (!existsSync(uploadsDir)) {
-      await mkdir(uploadsDir, { recursive: true })
-    }
-
-    // Generate unique filename
-    const ext = file.name.split('.').pop() || 'jpg'
-    const filename = `profile_${session.user.id}_${Date.now()}.${ext}`
-    const filepath = join(uploadsDir, filename)
-
-    // Write file
+    // Convert file to base64 buffer for Cloudinary upload
     const bytes = await file.arrayBuffer()
-    await writeFile(filepath, Buffer.from(bytes))
+    const buffer = Buffer.from(bytes)
+    const base64 = `data:${file.type};base64,${buffer.toString('base64')}`
 
-    const imageUrl = `/uploads/${filename}`
+    // Upload to Cloudinary
+    const uploadResult = await cloudinary.uploader.upload(base64, {
+      folder: 'coching-center/profiles',
+      public_id: `profile_${session.user.id}`,
+      overwrite: true,          // same user always overwrites old image
+      transformation: [
+        { width: 400, height: 400, crop: 'fill', gravity: 'face' }, // auto crop to face
+        { quality: 'auto', fetch_format: 'auto' },                   // auto optimize
+      ],
+    })
+
+    const imageUrl = uploadResult.secure_url
 
     return NextResponse.json({ success: true, imageUrl })
   } catch (error) {
