@@ -51,8 +51,29 @@ export default function AdminCoursesPage() {
   const [editingCourse, setEditingCourse] = useState<Course | null>(null)
   const [formData, setFormData] = useState(EMPTY_FORM)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string | null }>({ isOpen: false, id: null })
   const router = useRouter()
+
+  const handleThumbnailUpload = async (file: File) => {
+    setIsUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/upload/thumbnail', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (res.ok && data.imageUrl) {
+        set('thumbnail', data.imageUrl)
+        toast.success('Thumbnail uploaded!')
+      } else {
+        toast.error(data.error || 'Upload failed')
+      }
+    } catch {
+      toast.error('Failed to upload thumbnail')
+    } finally {
+      setIsUploading(false)
+    }
+  }
 
   const loadCourses = async () => {
     const res = await fetch('/api/admin/courses')
@@ -315,8 +336,41 @@ export default function AdminCoursesPage() {
                 </div>
 
                 <div>
-                  <label className={labelCls}>Thumbnail URL</label>
-                  <input type="url" value={formData.thumbnail} onChange={e => set('thumbnail', e.target.value)} className={inputCls} placeholder="https://example.com/image.jpg" />
+                  <label className={labelCls}>Thumbnail Image</label>
+                  {formData.thumbnail && (
+                    <div className="mb-3 relative rounded-xl overflow-hidden border border-gray-200 h-40">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={formData.thumbnail} alt="Thumbnail preview" className="w-full h-full object-cover" />
+                      <button type="button" onClick={() => set('thumbnail', '')} className="absolute top-2 right-2 w-7 h-7 rounded-lg bg-black/60 hover:bg-black/80 text-white flex items-center justify-center text-xs transition">
+                        ✕
+                      </button>
+                    </div>
+                  )}
+                  <label className={`flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed rounded-xl cursor-pointer transition-all ${isUploading ? 'border-indigo-300 bg-indigo-50' : 'border-gray-200 hover:border-indigo-400 hover:bg-indigo-50/50'}`}>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                      className="hidden"
+                      disabled={isUploading}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) handleThumbnailUpload(file)
+                        e.target.value = ''
+                      }}
+                    />
+                    {isUploading ? (
+                      <>
+                        <div className="w-5 h-5 rounded-full border-2 border-indigo-600/20 border-t-indigo-600 animate-spin" />
+                        <span className="text-sm text-indigo-600 font-medium">Uploading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                        <span className="text-sm text-gray-500 font-medium">{formData.thumbnail ? 'Change Image' : 'Upload Thumbnail'}</span>
+                        <span className="text-xs text-gray-400">(Max 5MB)</span>
+                      </>
+                    )}
+                  </label>
                 </div>
 
                 <div>

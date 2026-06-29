@@ -57,9 +57,9 @@ export default function Navbar() {
             </div>
             <div>
               <span className="text-xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                Coaching LMS
+                PECC LMS
               </span>
-              <span className="hidden sm:block text-xs text-gray-400">Learn & Grow</span>
+              <span className="hidden sm:block text-xs text-gray-400">Polytechnic Education</span>
             </div>
           </Link>
 

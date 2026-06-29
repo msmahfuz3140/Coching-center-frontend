@@ -11,6 +11,7 @@ interface Notice {
   id: string
   title: string
   content: string
+  image?: string | null
   priority: string
   createdAt: string
   author: { id: string; name: string | null; email: string }
@@ -26,7 +27,7 @@ const PRIORITY_META: Record<string, { label: string; color: string; dot: string;
 
 const inputCls = 'w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition'
 const labelCls = 'block text-sm font-semibold text-gray-700 mb-1.5'
-const EMPTY_FORM = { title: '', content: '', priority: 'normal', courseId: '' }
+const EMPTY_FORM = { title: '', content: '', priority: 'normal', courseId: '', image: '' }
 
 function fmt(d: string) {
   return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -40,11 +41,32 @@ export default function AdminNoticesPage() {
   const [editing, setEditing] = useState<Notice | null>(null)
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
   const [filterPriority, setFilterPriority] = useState('')
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string | null }>({ isOpen: false, id: null })
   const router = useRouter()
 
   const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }))
+
+  const handleImageUpload = async (file: File) => {
+    setIsUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/upload/thumbnail', { method: 'POST', body: fd })
+      const data = await res.json()
+      if (res.ok && data.imageUrl) {
+        set('image', data.imageUrl)
+        toast.success('Image uploaded!')
+      } else {
+        toast.error(data.error || 'Upload failed')
+      }
+    } catch {
+      toast.error('Failed to upload image')
+    } finally {
+      setIsUploading(false)
+    }
+  }
 
   useEffect(() => {
     async function init() {
@@ -76,7 +98,7 @@ export default function AdminNoticesPage() {
     setSaving(true)
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const body: any = { ...form, courseId: form.courseId || null }
+      const body: any = { ...form, courseId: form.courseId || null, image: form.image || null }
       if (editing) body.id = editing.id
       const res = await fetch('/api/admin/notices', { method: editing ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       const d = await res.json()
@@ -106,7 +128,7 @@ export default function AdminNoticesPage() {
 
   const openEdit = (notice: Notice) => {
     setEditing(notice)
-    setForm({ title: notice.title, content: notice.content, priority: notice.priority, courseId: notice.course?.id || '' })
+    setForm({ title: notice.title, content: notice.content, priority: notice.priority, courseId: notice.course?.id || '', image: notice.image || '' })
     setShowModal(true)
   }
 
@@ -216,6 +238,12 @@ export default function AdminNoticesPage() {
                           <span>·</span>
                           <span>{fmt(notice.createdAt)}</span>
                         </p>
+                        {notice.image && (
+                          <div className="mt-3 rounded-xl overflow-hidden border border-gray-100 max-h-48">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={notice.image} alt="Notice attachment" className="w-full h-full object-cover" />
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="flex gap-1.5 flex-shrink-0">
@@ -283,6 +311,45 @@ export default function AdminNoticesPage() {
                     Preview: <span className={`font-semibold ${PRIORITY_META[form.priority]?.color.split(' ')[1]}`}>{PRIORITY_META[form.priority]?.emoji} {form.title || 'Your notice title'}</span>
                   </div>
                 )}
+
+                {/* Optional Image Upload */}
+                <div>
+                  <label className={labelCls}>Attachment Image <span className="text-gray-400 font-normal">(Optional)</span></label>
+                  {form.image && (
+                    <div className="mb-3 relative rounded-xl overflow-hidden border border-gray-200 h-40">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={form.image} alt="Notice attachment preview" className="w-full h-full object-cover" />
+                      <button type="button" onClick={() => set('image', '')} className="absolute top-2 right-2 w-7 h-7 rounded-lg bg-black/60 hover:bg-black/80 text-white flex items-center justify-center text-xs transition">
+                        ✕
+                      </button>
+                    </div>
+                  )}
+                  <label className={`flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed rounded-xl cursor-pointer transition-all ${isUploading ? 'border-indigo-300 bg-indigo-50' : 'border-gray-200 hover:border-indigo-400 hover:bg-indigo-50/50'}`}>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                      className="hidden"
+                      disabled={isUploading}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
+                        if (file) handleImageUpload(file)
+                        e.target.value = ''
+                      }}
+                    />
+                    {isUploading ? (
+                      <>
+                        <div className="w-5 h-5 rounded-full border-2 border-indigo-600/20 border-t-indigo-600 animate-spin" />
+                        <span className="text-sm text-indigo-600 font-medium">Uploading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                        <span className="text-sm text-gray-500 font-medium">{form.image ? 'Change Image' : 'Upload Image'}</span>
+                        <span className="text-xs text-gray-400">(Max 5MB)</span>
+                      </>
+                    )}
+                  </label>
+                </div>
               </div>
 
               <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/60 flex gap-3 flex-shrink-0">

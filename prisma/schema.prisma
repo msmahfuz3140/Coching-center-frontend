@@ -206,6 +206,7 @@ model Notice {
   id        String   @id @default(cuid()) @map("_id")
   title     String
   content   String
+  image     String?
   priority  String   @default("normal") // low, normal, high, urgent
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

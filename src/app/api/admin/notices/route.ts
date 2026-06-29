@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { title, content, priority, courseId } = body
+    const { title, content, priority, courseId, image } = body
 
     if (!title || !content) {
       return NextResponse.json({ success: false, error: 'Title and content are required' }, { status: 400 })
@@ -51,6 +51,7 @@ export async function POST(request: Request) {
       data: {
         title,
         content,
+        image: image || null,
         priority: priority || 'normal',
         authorId: session.user.id,
         courseId: finalCourseId,
@@ -118,7 +119,7 @@ export async function PATCH(request: Request) {
     }
 
     const body = await request.json()
-    const { id, title, content, priority, courseId } = body
+    const { id, title, content, priority, courseId, image } = body
 
     if (!id) {
       return NextResponse.json({ success: false, error: 'Notice ID is required' }, { status: 400 })
@@ -133,6 +134,7 @@ export async function PATCH(request: Request) {
     if (title) data.title = title
     if (content) data.content = content
     if (priority) data.priority = priority
+    if (image !== undefined) data.image = image || null
     if (courseId !== undefined) {
       data.courseId = courseId && courseId !== '' ? courseId : null
     }
