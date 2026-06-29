@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { authClient } from '@/lib/auth-client'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import toast from 'react-hot-toast'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 
 interface Video {
   id: string
@@ -34,6 +35,7 @@ export default function CourseVideosPage() {
     orderIndex: '',
     isFree: false,
   })
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string | null }>({ isOpen: false, id: null })
 
   useEffect(() => { loadSession() }, [])
 
@@ -59,7 +61,7 @@ export default function CourseVideosPage() {
         const course = await res.json()
         setCourseName(course.title || '')
       }
-    } catch {}
+    } catch { }
   }
 
   const loadVideos = async () => {
@@ -107,9 +109,13 @@ export default function CourseVideosPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this video?')) return
+    setDeleteModal({ isOpen: true, id })
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteModal.id) return
     try {
-      const res = await fetch(`/api/admin/videos?id=${id}`, { method: 'DELETE' })
+      const res = await fetch(`/api/admin/videos?id=${deleteModal.id}`, { method: 'DELETE' })
       if (res.ok) {
         toast.success('Video deleted')
         await loadVideos()
@@ -117,6 +123,7 @@ export default function CourseVideosPage() {
     } catch {
       toast.error('Failed to delete video')
     }
+    setDeleteModal({ isOpen: false, id: null })
   }
 
   const resetForm = () => {
@@ -295,6 +302,16 @@ export default function CourseVideosPage() {
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={deleteModal.isOpen}
+        title="Delete Video"
+        message="Are you sure you want to delete this video? This action cannot be undone."
+        confirmLabel="Delete"
+        confirmColor="red"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteModal({ isOpen: false, id: null })}
+      />
     </DashboardLayout>
   )
 }

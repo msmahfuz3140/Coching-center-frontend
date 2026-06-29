@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { authClient } from '@/lib/auth-client'
 import DashboardLayout from '@/components/layout/DashboardLayout'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 
 type CourseCategory = 'DIPLOMA' | 'DUET_TECH' | 'DUET_NON_TECH' | 'SSC_9_10' | 'POLYTECHNIC_ADMISSION' | 'REFERRED_BATCH'
 
@@ -27,12 +28,12 @@ interface Course {
 }
 
 const CATEGORY_META: Record<CourseCategory, { label: string; color: string; emoji: string }> = {
-  DIPLOMA:               { label: 'Diploma',           color: 'bg-blue-100 text-blue-700',    emoji: '🎓' },
-  DUET_TECH:             { label: 'DUET Tech',          color: 'bg-violet-100 text-violet-700', emoji: '⚙️' },
-  DUET_NON_TECH:         { label: 'DUET Non-Tech',      color: 'bg-pink-100 text-pink-700',     emoji: '📐' },
-  SSC_9_10:              { label: 'SSC 9-10',           color: 'bg-emerald-100 text-emerald-700',emoji: '📗' },
-  POLYTECHNIC_ADMISSION: { label: 'Polytechnic',        color: 'bg-orange-100 text-orange-700', emoji: '🏫' },
-  REFERRED_BATCH:        { label: 'Referred Batch',     color: 'bg-amber-100 text-amber-700',   emoji: '🤝' },
+  DIPLOMA: { label: 'Diploma', color: 'bg-blue-100 text-blue-700', emoji: '🎓' },
+  DUET_TECH: { label: 'DUET Tech', color: 'bg-violet-100 text-violet-700', emoji: '⚙️' },
+  DUET_NON_TECH: { label: 'DUET Non-Tech', color: 'bg-pink-100 text-pink-700', emoji: '📐' },
+  SSC_9_10: { label: 'SSC 9-10', color: 'bg-emerald-100 text-emerald-700', emoji: '📗' },
+  POLYTECHNIC_ADMISSION: { label: 'Polytechnic', color: 'bg-orange-100 text-orange-700', emoji: '🏫' },
+  REFERRED_BATCH: { label: 'Referred Batch', color: 'bg-amber-100 text-amber-700', emoji: '🤝' },
 }
 
 const EMPTY_FORM = { title: '', slug: '', description: '', thumbnail: '', price: 0, category: 'DIPLOMA' as CourseCategory, semester: '', duration: '', requirements: '', isPublished: false }
@@ -50,6 +51,7 @@ export default function AdminCoursesPage() {
   const [editingCourse, setEditingCourse] = useState<Course | null>(null)
   const [formData, setFormData] = useState(EMPTY_FORM)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string | null }>({ isOpen: false, id: null })
   const router = useRouter()
 
   const loadCourses = async () => {
@@ -68,7 +70,7 @@ export default function AdminCoursesPage() {
       finally { setIsLoading(false) }
     }
     init()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const filtered = useMemo(() => courses.filter(c => {
@@ -100,10 +102,15 @@ export default function AdminCoursesPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this course? This cannot be undone.')) return
-    const res = await fetch(`/api/admin/courses/${id}`, { method: 'DELETE' })
+    setDeleteModal({ isOpen: true, id })
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteModal.id) return
+    const res = await fetch(`/api/admin/courses/${deleteModal.id}`, { method: 'DELETE' })
     if (res.ok) { await loadCourses(); toast.success('Course deleted') }
     else toast.error('Failed to delete')
+    setDeleteModal({ isOpen: false, id: null })
   }
 
   const openEdit = (course: Course) => {
@@ -338,6 +345,16 @@ export default function AdminCoursesPage() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={deleteModal.isOpen}
+        title="Delete Course"
+        message="This action cannot be undone. The course and all associated data will be permanently removed."
+        confirmLabel="Delete"
+        confirmColor="red"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteModal({ isOpen: false, id: null })}
+      />
     </DashboardLayout>
   )
 }

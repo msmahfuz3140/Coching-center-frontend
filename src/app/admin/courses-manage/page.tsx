@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { courseAPI } from '@/lib/courseAPI'
 import { authClient } from '@/lib/auth-client'
 import toast from 'react-hot-toast'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 
 interface Course {
     _id: string
@@ -30,6 +31,7 @@ export default function AdminCoursesPage() {
         youtubePlaylistId: '',
         instructor: '',
     })
+    const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string | null }>({ isOpen: false, id: null })
 
     useEffect(() => {
         loadSession()
@@ -86,15 +88,19 @@ export default function AdminCoursesPage() {
     }
 
     const handleDelete = async (id: string) => {
-        if (!confirm('Are you sure?')) return
+        setDeleteModal({ isOpen: true, id })
+    }
 
+    const confirmDelete = async () => {
+        if (!deleteModal.id || !session?.token) return
         try {
-            await courseAPI.deleteCourse(id, session.token || '')
+            await courseAPI.deleteCourse(deleteModal.id, session.token)
             toast.success('Course deleted')
             fetchCourses()
         } catch (error: any) {
             toast.error(error.message)
         }
+        setDeleteModal({ isOpen: false, id: null })
     }
 
     const resetForm = () => {
@@ -374,6 +380,16 @@ export default function AdminCoursesPage() {
                         <p className="text-gray-600">No courses yet. Create your first course!</p>
                     </div>
                 )}
+
+                <ConfirmModal
+                    isOpen={deleteModal.isOpen}
+                    title="Delete Course"
+                    message="Are you sure you want to delete this course? This action cannot be undone."
+                    confirmLabel="Delete"
+                    confirmColor="red"
+                    onConfirm={confirmDelete}
+                    onCancel={() => setDeleteModal({ isOpen: false, id: null })}
+                />
             </div>
         </div>
     )

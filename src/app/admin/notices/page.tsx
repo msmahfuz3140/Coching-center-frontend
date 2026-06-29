@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { authClient } from '@/lib/auth-client'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import toast from 'react-hot-toast'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 
 interface Notice {
   id: string
@@ -17,10 +18,10 @@ interface Notice {
 }
 
 const PRIORITY_META: Record<string, { label: string; color: string; dot: string; border: string; emoji: string }> = {
-  low:    { label: 'Low',    color: 'bg-gray-100 text-gray-600',     dot: 'bg-gray-400',    border: 'border-l-gray-300',   emoji: '📌' },
-  normal: { label: 'Normal', color: 'bg-blue-100 text-blue-700',     dot: 'bg-blue-500',    border: 'border-l-blue-400',   emoji: '📢' },
-  high:   { label: 'High',   color: 'bg-orange-100 text-orange-700', dot: 'bg-orange-500',  border: 'border-l-orange-400', emoji: '🔔' },
-  urgent: { label: 'Urgent', color: 'bg-red-100 text-red-700',       dot: 'bg-red-500',     border: 'border-l-red-500',    emoji: '🚨' },
+  low: { label: 'Low', color: 'bg-gray-100 text-gray-600', dot: 'bg-gray-400', border: 'border-l-gray-300', emoji: '📌' },
+  normal: { label: 'Normal', color: 'bg-blue-100 text-blue-700', dot: 'bg-blue-500', border: 'border-l-blue-400', emoji: '📢' },
+  high: { label: 'High', color: 'bg-orange-100 text-orange-700', dot: 'bg-orange-500', border: 'border-l-orange-400', emoji: '🔔' },
+  urgent: { label: 'Urgent', color: 'bg-red-100 text-red-700', dot: 'bg-red-500', border: 'border-l-red-500', emoji: '🚨' },
 }
 
 const inputCls = 'w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition'
@@ -40,6 +41,7 @@ export default function AdminNoticesPage() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [filterPriority, setFilterPriority] = useState('')
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; id: string | null }>({ isOpen: false, id: null })
   const router = useRouter()
 
   const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }))
@@ -55,7 +57,7 @@ export default function AdminNoticesPage() {
       finally { setIsLoading(false) }
     }
     init()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const loadNotices = async () => {
@@ -87,14 +89,19 @@ export default function AdminNoticesPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this notice?')) return
+    setDeleteModal({ isOpen: true, id })
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteModal.id) return
     try {
-      const res = await fetch(`/api/admin/notices?id=${id}`, { method: 'DELETE' })
+      const res = await fetch(`/api/admin/notices?id=${deleteModal.id}`, { method: 'DELETE' })
       const d = await res.json()
       if (!d.success) throw new Error(d.error)
       toast.success('Notice deleted')
-      setNotices(prev => prev.filter(n => n.id !== id))
+      setNotices(prev => prev.filter(n => n.id !== deleteModal.id))
     } catch (err: unknown) { toast.error(err instanceof Error ? err.message : 'Failed') }
+    setDeleteModal({ isOpen: false, id: null })
   }
 
   const openEdit = (notice: Notice) => {
@@ -288,6 +295,16 @@ export default function AdminNoticesPage() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={deleteModal.isOpen}
+        title="Delete Notice"
+        message="Are you sure you want to delete this notice? This action cannot be undone."
+        confirmLabel="Delete"
+        confirmColor="red"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteModal({ isOpen: false, id: null })}
+      />
     </DashboardLayout>
   )
 }
