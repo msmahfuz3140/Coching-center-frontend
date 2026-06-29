@@ -60,7 +60,7 @@ export async function GET(
     // - Not approved: keep course+syllabus metadata, but sanitize videos so youtubeUrl/content are not leaked
 
     const user = session?.user
-    if (user?.role !== 'ADMIN') {
+    if (user && user.role !== 'ADMIN') {
       const approvedEnrollment = await prisma.enrollment.findUnique({
         where: {
           userId_courseId: {
