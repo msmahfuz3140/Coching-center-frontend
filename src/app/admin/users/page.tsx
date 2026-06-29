@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { authClient } from '@/lib/auth-client'
 import DashboardLayout from '@/components/layout/DashboardLayout'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 
 type UserRow = {
   id: string
@@ -33,6 +34,8 @@ export default function AdminUsersPage() {
   const [isUpdating, setIsUpdating] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [filterRole, setFilterRole] = useState<'ALL' | 'ADMIN' | 'STUDENT'>('ALL')
+
+  const [confirmModal, setConfirmModal] = useState<{ title: string; message: string; color: 'red' | 'amber' | 'emerald'; label: string; onConfirm: () => void } | null>(null)
 
   const [isCourseAccessModalOpen, setIsCourseAccessModalOpen] = useState(false)
   const [activeCourseAccessUserId, setActiveCourseAccessUserId] = useState<string | null>(null)
@@ -85,9 +88,17 @@ export default function AdminUsersPage() {
     finally { setIsUpdating(null) }
   }
 
+  const triggerAction = (userId: string, action: 'BLOCK' | 'UNBLOCK' | 'DELETE') => {
+    const configs = {
+      DELETE:  { title: 'Delete User', message: 'This will permanently delete the user and all their data. This action cannot be undone.', color: 'red' as const,   label: 'Yes, Delete' },
+      BLOCK:   { title: 'Block User',  message: 'This user will be blocked and won\'t be able to log in or access any courses.', color: 'amber' as const, label: 'Yes, Block' },
+      UNBLOCK: { title: 'Unblock User', message: 'This user will be unblocked and regain access to their account.', color: 'emerald' as const, label: 'Yes, Unblock' },
+    }
+    const cfg = configs[action]
+    setConfirmModal({ ...cfg, onConfirm: () => { setConfirmModal(null); handleAction(userId, action) } })
+  }
+
   const handleAction = async (userId: string, action: 'BLOCK' | 'UNBLOCK' | 'DELETE') => {
-    const msg = action === 'DELETE' ? 'Delete this user? This cannot be undone.' : `${action} this user?`
-    if (!window.confirm(msg)) return
     setIsUpdating(userId)
     try {
       const res = await fetch('/api/admin/users', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId, action }) })
@@ -261,7 +272,7 @@ export default function AdminUsersPage() {
                         </button>
                         {/* Block / Unblock */}
                         <button
-                          onClick={() => handleAction(user.id, user.isBlocked ? 'UNBLOCK' : 'BLOCK')}
+                          onClick={() => triggerAction(user.id, user.isBlocked ? 'UNBLOCK' : 'BLOCK')}
                           disabled={isUpdating === user.id}
                           title={user.isBlocked ? 'Unblock' : 'Block'}
                           className={`p-2 rounded-xl border transition-all disabled:opacity-40 ${user.isBlocked ? 'border-emerald-200 hover:bg-emerald-50 text-emerald-600' : 'border-amber-200 hover:bg-amber-50 text-amber-600'}`}
@@ -270,7 +281,7 @@ export default function AdminUsersPage() {
                         </button>
                         {/* Delete */}
                         <button
-                          onClick={() => handleAction(user.id, 'DELETE')}
+                          onClick={() => triggerAction(user.id, 'DELETE')}
                           disabled={isUpdating === user.id}
                           title="Delete"
                           className="p-2 rounded-xl border border-red-200 hover:bg-red-50 text-red-500 hover:text-red-600 transition-all disabled:opacity-40"
@@ -291,6 +302,17 @@ export default function AdminUsersPage() {
           )}
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={!!confirmModal}
+        title={confirmModal?.title || ''}
+        message={confirmModal?.message || ''}
+        confirmLabel={confirmModal?.label || 'Confirm'}
+        confirmColor={confirmModal?.color || 'red'}
+        isLoading={!!isUpdating}
+        onConfirm={confirmModal?.onConfirm || (() => {})}
+        onCancel={() => setConfirmModal(null)}
+      />
 
       {/* Course Access Modal */}
       {isCourseAccessModalOpen && (

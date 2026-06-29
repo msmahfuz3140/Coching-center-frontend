@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { authClient } from '@/lib/auth-client'
 import DashboardLayout from '@/components/layout/DashboardLayout'
 import toast from 'react-hot-toast'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 
 interface Enrollment {
   id: string
@@ -38,6 +39,7 @@ export default function AdminEnrollmentsPage() {
   const [showModal, setShowModal] = useState<Enrollment | null>(null)
   const [modalAction, setModalAction] = useState<'approve' | 'reject' | null>(null)
   const [responseText, setResponseText] = useState('')
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
@@ -102,7 +104,7 @@ export default function AdminEnrollmentsPage() {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this enrollment record?')) return
+    setDeleteConfirm(null)
     try {
       const res = await fetch(`/api/admin/enrollments?id=${id}`, { method: 'DELETE' })
       const d = await res.json()
@@ -249,7 +251,7 @@ export default function AdminEnrollmentsPage() {
                             </>
                           ) : (
                             <button
-                              onClick={() => handleDelete(e.id)}
+                              onClick={() => setDeleteConfirm(e.id)}
                               className="p-2 rounded-xl border border-red-200 hover:bg-red-50 text-red-500 hover:text-red-600 transition"
                               title="Delete"
                             >
