@@ -84,57 +84,103 @@ export default function Sidebar() {
     return icons[icon] || icons.home
   }
 
+  const [isMobileOpen, setIsMobileOpen] = useState(false)
+
+  useEffect(() => {
+    if (isMobileOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = 'unset'
+    }
+    return () => {
+      document.body.style.overflow = 'unset'
+    }
+  }, [isMobileOpen])
+
   return (
     <>
-      {!isCollapsed && (
+      {/* Mobile Overlay */}
+      {isMobileOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-20 md:hidden"
-          onClick={() => setIsCollapsed(true)}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 md:hidden"
+          onClick={() => setIsMobileOpen(false)}
         />
       )}
 
-      <aside className={`fixed md:sticky top-0 left-0 z-30 h-screen bg-gradient-to-b from-gray-900 to-gray-800 text-white transition-all duration-300 ease-in-out ${isCollapsed ? '-translate-x-full md:translate-x-0 md:w-20' : 'translate-x-0 w-64'}`}>
+      {/* Mobile Toggle Button */}
+      <button
+        onClick={() => setIsMobileOpen(!isMobileOpen)}
+        className="md:hidden fixed bottom-6 left-6 z-40 w-14 h-14 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full shadow-2xl hover:shadow-blue-600/50 hover:scale-110 transition-all duration-300 flex items-center justify-center"
+        aria-label="Toggle menu"
+      >
+        <svg className={`w-6 h-6 transition-transform duration-300 ${isMobileOpen ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          {isMobileOpen ? (
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          ) : (
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          )}
+        </svg>
+      </button>
+
+      {/* Sidebar */}
+      <aside className={`fixed md:sticky top-0 left-0 z-40 h-screen bg-gradient-to-b from-gray-900 via-gray-900 to-gray-800 text-white transition-all duration-300 ease-in-out ${isCollapsed ? '-translate-x-full md:translate-x-0 md:w-20' : 'translate-x-0 w-72'} ${isMobileOpen ? 'translate-x-0' : ''}`}>
+        {/* Collapse Toggle - Desktop Only */}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="absolute -right-3 top-8 bg-gray-900 text-white rounded-full p-1 shadow-lg hover:bg-gray-700 transition-colors hidden md:block"
+          className="absolute -right-3 top-8 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full p-1.5 shadow-lg hover:shadow-blue-600/50 hover:scale-110 transition-all duration-200 hidden md:block z-10"
           aria-label="Toggle sidebar"
         >
-          <svg className={`w-4 h-4 transition-transform ${isCollapsed ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+          <svg className={`w-4 h-4 transition-transform duration-300 ${isCollapsed ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
           </svg>
         </button>
 
-        <div className={`p-4 border-b border-gray-700 ${isCollapsed ? 'text-center' : ''}`}>
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center flex-shrink-0">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-              </svg>
+        {/* Logo Section */}
+        <div className={`p-5 border-b border-gray-700/50 ${isCollapsed ? 'text-center' : ''}`}>
+          <div className="flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'}">
+            <div className="relative">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+              </div>
+              <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-gray-900"></div>
             </div>
             {!isCollapsed && (
-              <div>
-                <h2 className="font-bold text-sm">Coaching LMS</h2>
-                <p className="text-xs text-gray-400">{isAdmin ? 'Admin Panel' : 'Student Portal'}</p>
+              <div className="animate-fadeIn">
+                <h2 className="font-bold text-base bg-gradient-to-r from-white to-gray-200 bg-clip-text text-transparent">PECC LMS</h2>
+                <p className="text-xs text-gray-400 font-medium">{isAdmin ? '⚙️ Admin Panel' : '📚 Student Portal'}</p>
               </div>
             )}
           </div>
         </div>
 
+        {/* User Info */}
         {!isLoading && session?.user && !isCollapsed && (
-          <div className="px-4 py-3 border-b border-gray-700">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-xs font-bold">{session.user.name?.charAt(0)?.toUpperCase() || 'U'}</span>
+          <div className="px-4 py-3 border-b border-gray-700/50">
+            <div className="flex items-center space-x-3 bg-gray-800/50 rounded-xl p-2.5">
+              <div className="relative w-10 h-10 rounded-full overflow-hidden ring-2 ring-blue-500/50 flex-shrink-0">
+                {session?.user?.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={session.user.image} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                    <span className="text-sm font-bold text-white">
+                      {session?.user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                    </span>
+                  </div>
+                )}
               </div>
-              <div className="min-w-0">
-                <p className="text-sm font-medium truncate">{session.user.name || 'User'}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-white truncate">{session.user.name || 'User'}</p>
                 <p className="text-xs text-gray-400 truncate">{session.user.email}</p>
               </div>
             </div>
           </div>
         )}
 
-        <nav className="p-3 space-y-1 overflow-y-auto">
+        {/* Navigation */}
+        <nav className="p-3 space-y-1 overflow-y-auto flex-1" style={{ maxHeight: 'calc(100vh - 200px)' }}>
           {menuItems.map((item) => {
             const isActive = pathname === item.href
             const badge = 'badge' in item ? item.badge : 0
@@ -142,29 +188,44 @@ export default function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'} px-3 py-2.5 rounded-lg transition-all duration-200 ${isActive ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 'text-gray-300 hover:bg-gray-700/50 hover:text-white'}`}
+                onClick={() => setIsMobileOpen(false)}
+                className={`flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'} px-3 py-3 rounded-xl transition-all duration-200 group relative ${isActive
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-600/30'
+                    : 'text-gray-300 hover:bg-gray-800/50 hover:text-white'
+                  }`}
                 title={isCollapsed ? item.label : undefined}
               >
-                <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={getIcon(item.icon)} />
-                </svg>
+                <div className={`relative ${isActive ? 'text-white' : 'text-gray-400 group-hover:text-white'}`}>
+                  <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={getIcon(item.icon)} />
+                  </svg>
+                </div>
                 {!isCollapsed && (
                   <>
-                    <span className="text-sm font-medium flex-1">{item.label}</span>
+                    <span className={`text-sm font-medium flex-1 ${isActive ? 'text-white' : ''}`}>{item.label}</span>
                     {typeof badge === 'number' && badge > 0 && (
-                      <span className="min-w-[1.25rem] h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                      <span className="min-w-[1.5rem] h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
                         {badge > 9 ? '9+' : badge}
                       </span>
                     )}
                   </>
+                )}
+                {isActive && !isCollapsed && (
+                  <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-8 bg-white rounded-r-full"></div>
                 )}
               </Link>
             )
           })}
         </nav>
 
-        <div className="mt-auto border-t border-gray-700 p-4">
-          <Link href="/dashboard/profile" className="flex items-center gap-3 rounded-lg bg-gray-800 px-3 py-2 text-sm font-medium text-gray-200 hover:bg-gray-700 transition-colors group">
+        {/* Bottom Section */}
+        <div className="border-t border-gray-700/50 p-3 space-y-2">
+          {/* View Profile Link */}
+          <Link
+            href="/dashboard/profile"
+            onClick={() => setIsMobileOpen(false)}
+            className="flex items-center gap-3 rounded-xl bg-gray-800/30 hover:bg-gray-800 px-3 py-2.5 text-sm font-medium text-gray-200 hover:text-white transition-all duration-200 group"
+          >
             <div className="relative w-8 h-8 rounded-full overflow-hidden ring-2 ring-gray-600 group-hover:ring-blue-500 transition-all duration-200 flex-shrink-0">
               {session?.user?.image ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -177,16 +238,15 @@ export default function Sidebar() {
                 </div>
               )}
             </div>
-            {!isCollapsed && <span>View Profile</span>}
+            {!isCollapsed && <span className="group-hover:translate-x-1 transition-transform duration-200">View Profile</span>}
           </Link>
-        </div>
 
-        <div className="md:hidden p-4 border-t border-gray-700">
+          {/* Mobile Close Button */}
           <button
-            onClick={() => setIsCollapsed(true)}
-            className="w-full py-2 text-center text-gray-400 hover:text-white transition-colors"
+            onClick={() => setIsMobileOpen(false)}
+            className="md:hidden w-full py-2.5 text-center text-sm font-medium text-gray-400 hover:text-white hover:bg-gray-800/50 rounded-xl transition-all duration-200"
           >
-            Close Menu
+            ✕ Close Menu
           </button>
         </div>
       </aside>

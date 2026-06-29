@@ -197,11 +197,11 @@ export default function AdminDashboard() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 max-w-7xl mx-auto">
+      <div className="space-y-4 sm:space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* ── Hero Banner ── */}
         <div
-          className="relative rounded-3xl overflow-hidden shadow-2xl"
+          className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl"
           style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 45%, #4f46e5 100%)' }}
         >
           {/* Decorative blobs */}
@@ -209,11 +209,11 @@ export default function AdminDashboard() {
           <div className="absolute -bottom-20 -left-10 w-80 h-80 rounded-full bg-white/5" />
           <div className="absolute top-10 right-48 w-36 h-36 rounded-full bg-indigo-500/10" />
 
-          <div className="relative px-8 py-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-            <div className="flex items-center gap-5">
+          <div className="relative px-6 sm:px-8 py-6 sm:py-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6">
+            <div className="flex items-center gap-4 sm:gap-5">
               {/* Avatar */}
               <Link href="/dashboard/profile">
-                <div className="w-16 h-16 rounded-2xl border-2 border-white/40 bg-white/20 flex items-center justify-center font-black text-xl text-white shadow-lg overflow-hidden hover:scale-105 transition-transform cursor-pointer flex-shrink-0">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl border-2 border-white/40 bg-white/20 flex items-center justify-center font-black text-lg sm:text-xl text-white shadow-lg overflow-hidden hover:scale-105 transition-transform cursor-pointer flex-shrink-0">
                   {user?.image ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={user.image} alt="avatar" className="w-full h-full object-cover" />
@@ -224,40 +224,42 @@ export default function AdminDashboard() {
               </Link>
 
               <div>
-                <p className="text-indigo-300 text-sm font-medium tracking-wide flex items-center gap-2">
-                  <span className="px-2 py-0.5 bg-amber-400/20 text-amber-300 border border-amber-400/30 rounded-full text-xs font-semibold">👑 ADMIN</span>
-                  {getGreeting()} · {currentTime.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                <p className="text-indigo-300 text-xs sm:text-sm font-medium tracking-wide flex items-center gap-2 flex-wrap">
+                  <span className="px-2 py-0.5 bg-amber-400/20 text-amber-300 border border-amber-400/30 rounded-full text-[10px] sm:text-xs font-semibold">👑 ADMIN</span>
+                  <span className="hidden sm:inline">·</span>
+                  <span className="sm:hidden">·</span>
+                  {getGreeting()} · {currentTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                 </p>
-                <h1 className="mt-1 text-2xl sm:text-3xl font-extrabold text-white leading-tight">
+                <h1 className="mt-1 text-xl sm:text-2xl md:text-3xl font-extrabold text-white leading-tight">
                   {user?.name || 'Admin'}
                 </h1>
-                <p className="mt-1 text-indigo-200 text-sm">
+                <p className="mt-1 text-indigo-200 text-xs sm:text-sm">
                   Manage your coaching center from one powerful workspace 🚀
                 </p>
               </div>
             </div>
 
             {/* Right side — quick CTA */}
-            <div className="flex flex-col sm:flex-row gap-3 flex-shrink-0">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 flex-shrink-0 w-full sm:w-auto">
               <Link
                 href="/admin/enrollments"
-                className="inline-flex items-center gap-2 bg-white text-indigo-700 font-bold px-5 py-2.5 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all text-sm"
+                className="inline-flex items-center justify-center gap-2 bg-white text-indigo-700 font-bold px-4 sm:px-5 py-2 sm:py-2.5 rounded-2xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all text-xs sm:text-sm"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                 </svg>
                 Review Requests
                 {(stats?.pendingEnrollments ?? 0) > 0 && (
-                  <span className="bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
+                  <span className="bg-red-500 text-white text-[10px] sm:text-xs font-bold px-1.5 py-0.5 rounded-full">
                     {stats?.pendingEnrollments}
                   </span>
                 )}
               </Link>
               <Link
                 href="/admin/courses"
-                className="inline-flex items-center gap-2 bg-white/15 hover:bg-white/25 border border-white/30 text-white font-semibold px-5 py-2.5 rounded-2xl transition-all text-sm"
+                className="inline-flex items-center justify-center gap-2 bg-white/15 hover:bg-white/25 border border-white/30 text-white font-semibold px-4 sm:px-5 py-2 sm:py-2.5 rounded-2xl transition-all text-xs sm:text-sm"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+                <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                 </svg>
                 New Course
@@ -266,11 +268,11 @@ export default function AdminDashboard() {
           </div>
 
           {/* Bottom live time strip */}
-          <div className="relative border-t border-white/10 px-8 py-3 flex items-center justify-between">
-            <p className="text-indigo-300 text-xs">
+          <div className="relative border-t border-white/10 px-6 sm:px-8 py-3 flex items-center justify-between">
+            <p className="text-indigo-300 text-[10px] sm:text-xs">
               🕐 {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })} · Admin Control Center
             </p>
-            <p className="text-indigo-300 text-xs hidden sm:block">
+            <p className="text-indigo-300 text-[10px] sm:text-xs hidden sm:block">
               Total Students: <span className="text-white font-bold">{stats?.totalUsers ?? 0}</span> &nbsp;·&nbsp;
               Courses: <span className="text-white font-bold">{stats?.totalCourses ?? 0}</span>
             </p>
@@ -278,21 +280,21 @@ export default function AdminDashboard() {
         </div>
 
         {/* ── Stat Cards ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
           {statCards.map((s) => (
             <Link
               key={s.label}
               href={s.href}
-              className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg transition-all p-6 flex items-center gap-5"
+              className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg transition-all p-5 sm:p-6 flex items-center gap-4"
             >
-              <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${s.gradient} flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform flex-shrink-0`}>
+              <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br ${s.gradient} flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform flex-shrink-0`}>
                 {s.icon}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-3xl font-extrabold text-gray-900">{s.value}</p>
-                <p className="text-sm text-gray-500 font-medium mt-0.5">{s.label}</p>
+                <p className="text-2xl sm:text-3xl font-extrabold text-gray-900">{s.value}</p>
+                <p className="text-xs sm:text-sm text-gray-500 font-medium mt-0.5">{s.label}</p>
               </div>
-              <svg className="w-5 h-5 text-gray-300 group-hover:text-indigo-400 ml-auto transition-colors flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-300 group-hover:text-indigo-400 ml-auto transition-colors flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
             </Link>
@@ -301,24 +303,24 @@ export default function AdminDashboard() {
 
         {/* ── Pending Alert ── */}
         {stats && stats.pendingEnrollments > 0 && (
-          <div className="rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0">⏳</div>
+          <div className="rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-amber-100 rounded-2xl flex items-center justify-center text-xl sm:text-2xl flex-shrink-0">⏳</div>
               <div>
-                <h3 className="font-bold text-amber-900">
+                <h3 className="font-bold text-amber-900 text-sm sm:text-base">
                   {stats.pendingEnrollments} Enrollment Request{stats.pendingEnrollments !== 1 ? 's' : ''} Pending
                 </h3>
-                <p className="text-sm text-amber-700 mt-0.5">
+                <p className="text-xs sm:text-sm text-amber-700 mt-0.5">
                   Students are waiting for your approval. Review and take action now.
                 </p>
               </div>
             </div>
             <Link
               href="/admin/enrollments"
-              className="flex-shrink-0 flex items-center gap-2 px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-semibold text-sm transition-colors shadow-md"
+              className="flex-shrink-0 flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-semibold text-xs sm:text-sm transition-colors shadow-md"
             >
               Review Now
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
+              <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
             </Link>
@@ -326,27 +328,27 @@ export default function AdminDashboard() {
         )}
 
         {/* ── Main Grid ── */}
-        <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+        <div className="grid gap-4 sm:gap-6 lg:grid-cols-[1fr_340px] xl:grid-cols-[1fr_380px]">
 
           {/* LEFT */}
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
 
             {/* Quick Actions */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-              <div className="mb-5">
-                <h2 className="text-lg font-bold text-gray-900">⚡ Quick Actions</h2>
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:p-6">
+              <div className="mb-4 sm:mb-5">
+                <h2 className="text-base sm:text-lg font-bold text-gray-900">⚡ Quick Actions</h2>
                 <p className="text-xs text-gray-400 mt-0.5">Jump to any management section</p>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                 {quickActions.map((a) => (
                   <Link
                     key={a.href}
                     href={a.href}
-                    className={`group flex items-center gap-4 p-4 rounded-xl border border-gray-100 transition-all ${a.color}`}
+                    className={`group flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border border-gray-100 transition-all ${a.color}`}
                   >
-                    <span className="text-2xl flex-shrink-0">{a.icon}</span>
+                    <span className="text-xl sm:text-2xl flex-shrink-0">{a.icon}</span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                      <p className="text-xs sm:text-sm font-bold text-gray-800 flex items-center gap-2">
                         {a.label}
                         {typeof a.badge === 'number' && a.badge > 0 && (
                           <span className="px-1.5 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full">
@@ -354,9 +356,9 @@ export default function AdminDashboard() {
                           </span>
                         )}
                       </p>
-                      <p className="text-xs text-gray-400 mt-0.5">{a.desc}</p>
+                      <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">{a.desc}</p>
                     </div>
-                    <svg className="w-4 h-4 text-gray-300 group-hover:text-current ml-auto flex-shrink-0 transition-colors" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <svg className="w-3 h-3 sm:w-4 sm:h-4 text-gray-300 group-hover:text-current ml-auto flex-shrink-0 transition-colors" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                     </svg>
                   </Link>
@@ -365,46 +367,46 @@ export default function AdminDashboard() {
             </div>
 
             {/* Enrollment Breakdown */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-              <div className="flex items-center justify-between mb-5">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:p-6">
+              <div className="flex items-center justify-between mb-4 sm:mb-5">
                 <div>
-                  <h2 className="text-lg font-bold text-gray-900">📊 Enrollment Overview</h2>
+                  <h2 className="text-base sm:text-lg font-bold text-gray-900">📊 Enrollment Overview</h2>
                   <p className="text-xs text-gray-400 mt-0.5">Total: {stats?.totalEnrollments ?? 0} requests</p>
                 </div>
-                <Link href="/admin/enrollments" className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
+                <Link href="/admin/enrollments" className="text-xs sm:text-sm font-semibold text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
                   Manage
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+                  <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
                 </Link>
               </div>
 
               {/* Bar chart visual */}
-              <div className="flex items-end gap-3 h-24 mb-5">
+              <div className="flex items-end gap-2 sm:gap-3 h-20 sm:h-24 mb-4 sm:mb-5">
                 {enrollmentBreakdown.map((item) => {
                   const pct = Math.round((item.value / total) * 100)
                   return (
                     <div key={item.label} className="flex-1 flex flex-col items-center gap-1">
-                      <span className="text-xs font-bold text-gray-700">{item.value}</span>
-                      <div className="w-full rounded-t-lg transition-all" style={{ height: `${Math.max(pct, 4)}%`, minHeight: 8 }}>
+                      <span className="text-[10px] sm:text-xs font-bold text-gray-700">{item.value}</span>
+                      <div className="w-full rounded-t-lg transition-all" style={{ height: `${Math.max(pct, 4)}%`, minHeight: 6 }}>
                         <div className={`w-full h-full rounded-t-lg ${item.color}`} />
                       </div>
-                      <span className="text-xs text-gray-500">{item.label}</span>
+                      <span className="text-[10px] sm:text-xs text-gray-500">{item.label}</span>
                     </div>
                   )
                 })}
               </div>
 
               {/* Legend */}
-              <div className="space-y-2.5">
+              <div className="space-y-2">
                 {enrollmentBreakdown.map((item) => {
                   const pct = total > 0 ? Math.round((item.value / total) * 100) : 0
                   return (
-                    <div key={item.label} className="flex items-center gap-3">
-                      <div className={`w-3 h-3 rounded-full ${item.color} flex-shrink-0`} />
-                      <span className="text-sm text-gray-600 flex-1">{item.label}</span>
-                      <div className="flex-1 bg-gray-100 rounded-full h-1.5">
-                        <div className={`h-1.5 rounded-full ${item.color} transition-all`} style={{ width: `${pct}%` }} />
+                    <div key={item.label} className="flex items-center gap-2 sm:gap-3">
+                      <div className={`w-2 h-2 sm:w-3 sm:h-3 rounded-full ${item.color} flex-shrink-0`} />
+                      <span className="text-xs sm:text-sm text-gray-600 flex-1">{item.label}</span>
+                      <div className="flex-1 bg-gray-100 rounded-full h-1 sm:h-1.5">
+                        <div className={`h-1 sm:h-1.5 rounded-full ${item.color} transition-all`} style={{ width: `${pct}%` }} />
                       </div>
-                      <span className="text-xs font-bold text-gray-700 w-8 text-right">{pct}%</span>
+                      <span className="text-[10px] sm:text-xs font-bold text-gray-700 w-6 sm:w-8 text-right">{pct}%</span>
                     </div>
                   )
                 })}
@@ -413,11 +415,11 @@ export default function AdminDashboard() {
           </div>
 
           {/* RIGHT */}
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
 
             {/* Platform Summary */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-              <h2 className="text-lg font-bold text-gray-900 mb-5">🏫 Platform Summary</h2>
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 sm:p-6">
+              <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-4 sm:mb-5">🏫 Platform Summary</h2>
               <div className="divide-y divide-gray-100">
                 {[
                   { label: 'Total Students', value: stats?.totalUsers ?? 0, icon: '👥', color: 'text-blue-600' },
@@ -426,12 +428,12 @@ export default function AdminDashboard() {
                   { label: 'Active Students', value: stats?.approvedEnrollments ?? 0, icon: '✅', color: 'text-emerald-600' },
                   { label: 'Pending Reviews', value: stats?.pendingEnrollments ?? 0, icon: '⏳', color: 'text-amber-600' },
                 ].map((row) => (
-                  <div key={row.label} className="py-3 flex items-center justify-between">
-                    <span className="text-sm text-gray-500 flex items-center gap-2">
+                  <div key={row.label} className="py-2.5 sm:py-3 flex items-center justify-between">
+                    <span className="text-xs sm:text-sm text-gray-500 flex items-center gap-2">
                       <span>{row.icon}</span>
                       {row.label}
                     </span>
-                    <span className={`text-sm font-bold ${row.color}`}>{row.value}</span>
+                    <span className={`text-xs sm:text-sm font-bold ${row.color}`}>{row.value}</span>
                   </div>
                 ))}
               </div>
@@ -442,52 +444,52 @@ export default function AdminDashboard() {
               className="rounded-2xl overflow-hidden"
               style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)' }}
             >
-              <div className="p-6">
-                <div className="text-4xl mb-3">🛡️</div>
-                <h3 className="text-white font-bold text-lg">Admin Pro Tips</h3>
-                <ul className="mt-3 space-y-2.5">
+              <div className="p-5 sm:p-6">
+                <div className="text-3xl sm:text-4xl mb-2 sm:mb-3">🛡️</div>
+                <h3 className="text-white font-bold text-base sm:text-lg">Admin Pro Tips</h3>
+                <ul className="mt-2 sm:mt-3 space-y-2">
                   {[
                     'Review pending enrollments regularly',
                     'Post notices to keep students informed',
                     'Add videos to maximize course value',
                   ].map((tip) => (
-                    <li key={tip} className="flex items-start gap-2 text-indigo-200 text-sm">
+                    <li key={tip} className="flex items-start gap-2 text-indigo-200 text-xs sm:text-sm">
                       <span className="text-emerald-400 flex-shrink-0 mt-0.5">✓</span>
                       {tip}
                     </li>
                   ))}
                 </ul>
-                <div className="mt-5 flex gap-3">
+                <div className="mt-4 sm:mt-5 flex gap-2 sm:gap-3">
                   <Link
                     href="/admin/enrollments"
-                    className="flex-1 text-center py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold rounded-xl transition-colors"
+                    className="flex-1 text-center py-2 sm:py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-semibold rounded-xl transition-colors"
                   >
                     Enrollments
                   </Link>
                   <Link
                     href="/admin/notices"
-                    className="flex-1 text-center py-2.5 bg-white/10 hover:bg-white/20 text-white text-sm font-semibold rounded-xl transition-colors"
+                    className="flex-1 text-center py-2 sm:py-2.5 bg-white/10 hover:bg-white/20 text-white text-xs sm:text-sm font-semibold rounded-xl transition-colors"
                   >
                     Post Notice
                   </Link>
                 </div>
               </div>
 
-              <div className="border-t border-white/10 px-6 py-4 flex items-center gap-3">
-                <div className="w-8 h-8 bg-amber-500/20 rounded-lg flex items-center justify-center text-amber-400 text-lg flex-shrink-0">⚡</div>
-                <p className="text-indigo-300 text-xs leading-relaxed">
+              <div className="border-t border-white/10 px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-2 sm:gap-3">
+                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-amber-500/20 rounded-lg flex items-center justify-center text-amber-400 text-sm sm:text-lg flex-shrink-0">⚡</div>
+                <p className="text-indigo-300 text-[10px] sm:text-xs leading-relaxed">
                   <span className="text-white font-semibold">Note:</span> Only approved students can access course content and videos.
                 </p>
               </div>
             </div>
 
             {/* Live Clock */}
-            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 text-center">
-              <p className="text-4xl font-black text-gray-900 tabular-nums">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-5 text-center">
+              <p className="text-3xl sm:text-4xl font-black text-gray-900 tabular-nums">
                 {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
               </p>
-              <p className="text-sm text-gray-400 mt-1 font-medium">
-                {currentTime.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+              <p className="text-xs sm:text-sm text-gray-400 mt-1 font-medium">
+                {currentTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
               </p>
             </div>
           </div>

@@ -175,32 +175,6 @@ export default function FeaturesPage() {
         </div>
       </section>
 
-      {/* Tech Stack */}
-      <section className="bg-gray-50 py-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <span className="text-sm font-semibold text-green-600 uppercase tracking-wider">Technology</span>
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mt-2">Built With Modern Tech Stack</h2>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6">
-            {[
-              { name: 'Next.js', desc: 'React Framework', emoji: '⚡' },
-              { name: 'MongoDB', desc: 'Database', emoji: '🍃' },
-              { name: 'Node.js', desc: 'Backend Runtime', emoji: '🟢' },
-              { name: 'Prisma', desc: 'ORM Layer', emoji: '🔷' },
-              { name: 'Tailwind', desc: 'CSS Framework', emoji: '🎨' },
-              { name: 'Cloudinary', desc: 'Image CDN', emoji: '☁️' },
-            ].map((t) => (
-              <div key={t.name} className="bg-white rounded-xl border border-gray-100 p-5 text-center hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group">
-                <div className="text-3xl mb-3 group-hover:scale-110 transition-transform duration-300">{t.emoji}</div>
-                <h3 className="font-bold text-gray-900 text-sm">{t.name}</h3>
-                <p className="text-xs text-gray-500 mt-1">{t.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* CTA */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
         <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-3xl p-12 md:p-16 text-center text-white">
