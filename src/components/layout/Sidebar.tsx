@@ -102,28 +102,24 @@ export default function Sidebar() {
       {/* Mobile Overlay */}
       {isMobileOpen && (
         <div
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-30 md:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60] md:hidden"
           onClick={() => setIsMobileOpen(false)}
         />
       )}
 
-      {/* Mobile Toggle Button */}
-      <button
-        onClick={() => setIsMobileOpen(!isMobileOpen)}
-        className="md:hidden fixed bottom-6 left-6 z-40 w-14 h-14 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-full shadow-2xl hover:shadow-blue-600/50 hover:scale-110 transition-all duration-300 flex items-center justify-center"
-        aria-label="Toggle menu"
-      >
-        <svg className={`w-6 h-6 transition-transform duration-300 ${isMobileOpen ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          {isMobileOpen ? (
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          ) : (
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          )}
-        </svg>
-      </button>
-
       {/* Sidebar */}
-      <aside className={`fixed md:sticky top-0 left-0 z-40 h-screen bg-gradient-to-b from-gray-900 via-gray-900 to-gray-800 text-white transition-all duration-300 ease-in-out ${isCollapsed ? '-translate-x-full md:translate-x-0 md:w-20' : 'translate-x-0 w-72'} ${isMobileOpen ? 'translate-x-0' : ''}`}>
+      <aside className={`fixed md:sticky top-0 left-0 z-[70] md:z-40 h-screen bg-gradient-to-b from-gray-900 via-gray-900 to-gray-800 text-white transition-all duration-300 ease-in-out w-72 flex flex-col ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 ${isCollapsed ? 'md:w-20' : 'md:w-72'}`}>
+        {/* Mobile Toggle Button - Sticks to the right edge of the sidebar */}
+        <button
+          onClick={() => setIsMobileOpen(!isMobileOpen)}
+          className="absolute left-full top-28 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-r-xl p-3 shadow-lg hover:scale-105 active:scale-95 transition-all duration-200 md:hidden z-40 flex items-center justify-center border-y border-r border-blue-500/30"
+          aria-label="Toggle mobile menu"
+        >
+          <svg className={`w-5 h-5 transition-transform duration-300 ${isMobileOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+
         {/* Collapse Toggle - Desktop Only */}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
@@ -137,7 +133,7 @@ export default function Sidebar() {
 
         {/* Logo Section */}
         <div className={`p-5 border-b border-gray-700/50 ${isCollapsed ? 'text-center' : ''}`}>
-          <div className="flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'}">
+          <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'}`}>
             <div className="relative">
               <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
                 <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -180,7 +176,7 @@ export default function Sidebar() {
         )}
 
         {/* Navigation */}
-        <nav className="p-3 space-y-1 overflow-y-auto flex-1" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+        <nav className="p-3 space-y-1 overflow-y-auto flex-1">
           {menuItems.map((item) => {
             const isActive = pathname === item.href
             const badge = 'badge' in item ? item.badge : 0

@@ -167,15 +167,15 @@ export default function Footer() {
                             <p className="text-sm text-gray-500">
                                 © {currentYear} <span className="text-gray-400">Polytechnic Education Coaching Center</span>. All rights reserved.
                             </p>
-                            <div className="flex items-center gap-6">
+                            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 sm:gap-6">
                                 <Link href="#" className="text-sm text-gray-500 hover:text-gray-300 transition-colors duration-200">
                                     Terms of Service
                                 </Link>
-                                <span className="w-1 h-1 bg-gray-700 rounded-full" />
+                                <span className="hidden sm:inline w-1 h-1 bg-gray-700 rounded-full" />
                                 <Link href="#" className="text-sm text-gray-500 hover:text-gray-300 transition-colors duration-200">
                                     Privacy Policy
                                 </Link>
-                                <span className="w-1 h-1 bg-gray-700 rounded-full" />
+                                <span className="hidden sm:inline w-1 h-1 bg-gray-700 rounded-full" />
                                 <Link href="#" className="text-sm text-gray-500 hover:text-gray-300 transition-colors duration-200">
                                     Cookie Policy
                                 </Link>

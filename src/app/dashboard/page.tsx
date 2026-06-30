@@ -210,8 +210,8 @@ export default function DashboardPage() {
           <div className="absolute -bottom-20 -left-10 w-80 h-80 rounded-full bg-white/5" />
           <div className="absolute top-8 right-40 w-32 h-32 rounded-full bg-white/5" />
 
-          <div className="relative px-6 sm:px-8 py-6 sm:py-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6">
-            <div className="flex items-center gap-4 sm:gap-5">
+          <div className="relative px-6 sm:px-8 py-6 sm:py-8 flex flex-col sm:flex-row items-center sm:items-center justify-between gap-6">
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-5 text-center sm:text-left">
               {/* Avatar */}
               <Link href="/dashboard/profile">
                 <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl border-2 border-white/40 bg-white/20 flex items-center justify-center font-black text-lg sm:text-xl text-white shadow-lg overflow-hidden hover:scale-105 transition-transform cursor-pointer flex-shrink-0">
@@ -224,14 +224,14 @@ export default function DashboardPage() {
                 </div>
               </Link>
 
-              <div>
+              <div className="min-w-0">
                 <p className="text-blue-200 text-xs sm:text-sm font-medium tracking-wide">
                   {getGreeting()} 👋 · {currentTime.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                 </p>
-                <h1 className="mt-1 text-xl sm:text-2xl md:text-3xl font-extrabold text-white leading-tight">
+                <h1 className="mt-1 text-xl sm:text-2xl md:text-3xl font-extrabold text-white leading-tight truncate max-w-full">
                   {user?.name || 'Student'}
                 </h1>
-                <p className="mt-1 text-blue-100 text-xs sm:text-sm">
+                <p className="mt-1 text-blue-100 text-xs sm:text-sm max-w-md mx-auto sm:mx-0">
                   Track your progress, stay on top of notices, and keep learning! 🚀
                 </p>
               </div>
@@ -253,13 +253,13 @@ export default function DashboardPage() {
         {/* ── Stats Row ── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
           {stats.map((s) => (
-            <Link key={s.label} href={s.href} className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg transition-all p-5 sm:p-6 flex items-center gap-4">
+            <Link key={s.label} href={s.href} className="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg transition-all p-4 sm:p-6 flex items-center gap-3 sm:gap-4">
               <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br ${s.gradient} flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform flex-shrink-0`}>
                 {s.icon}
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="text-2xl sm:text-3xl font-extrabold text-gray-900">{s.value}</p>
-                <p className="text-xs sm:text-sm text-gray-500 font-medium mt-0.5">{s.label}</p>
+                <p className="text-xs sm:text-sm text-gray-500 font-medium mt-0.5 truncate">{s.label}</p>
               </div>
               <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-300 group-hover:text-blue-400 ml-auto transition-colors flex-shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -303,7 +303,7 @@ export default function DashboardPage() {
                         {categoryLabels[e.course.category]?.[0] || '📘'}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs sm:text-sm font-bold text-gray-900 truncate group-hover:text-blue-700 transition-colors">{e.course.title}</p>
+                        <p className="text-xs sm:text-sm font-bold text-gray-900 break-words group-hover:text-blue-700 transition-colors">{e.course.title}</p>
                         <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">{categoryLabels[e.course.category] || e.course.category} · Enrolled {formatDate(e.enrolledAt)}</p>
                         <div className="mt-1.5 sm:mt-2 flex items-center gap-2">
                           <div className="flex-1 bg-gray-200 rounded-full h-1 sm:h-1.5">
@@ -352,8 +352,8 @@ export default function DashboardPage() {
                     >
                       <span className="text-base sm:text-lg flex-shrink-0">{n.type === 'video' ? '🎬' : n.type === 'notice' ? '📢' : n.type === 'course_update' ? '📚' : '🔔'}</span>
                       <div className="min-w-0 flex-1">
-                        <p className={`text-xs sm:text-sm font-semibold truncate ${!n.isRead ? 'text-gray-900' : 'text-gray-600'}`}>{n.title}</p>
-                        <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5 truncate">{n.message}</p>
+                        <p className={`text-xs sm:text-sm font-semibold break-words ${!n.isRead ? 'text-gray-900' : 'text-gray-600'}`}>{n.title}</p>
+                        <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5 break-words">{n.message}</p>
                       </div>
                       {!n.isRead && <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-500 rounded-full mt-1.5 sm:mt-2 flex-shrink-0" />}
                     </Link>
@@ -391,8 +391,8 @@ export default function DashboardPage() {
                           {cfg.label}
                         </span>
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs sm:text-sm font-semibold text-gray-900 truncate">{n.title}</p>
-                          <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5 truncate">
+                          <p className="text-xs sm:text-sm font-semibold text-gray-900 break-words">{n.title}</p>
+                          <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5 break-words">
                             {n.course ? n.course.title : 'General'} · {formatDate(n.createdAt)}
                           </p>
                         </div>
