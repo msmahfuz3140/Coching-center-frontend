@@ -130,7 +130,7 @@ export default function AdminEnrollmentsPage() {
       <div className="space-y-4 sm:space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* Header */}
-        <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #4f46e5 100)' }}>
+        <div className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-xl" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #4f46e5 100%)' }}>
           <div className="absolute -top-12 -right-12 w-56 h-56 rounded-full bg-white/5" />
           <div className="absolute -bottom-16 -left-8 w-64 h-64 rounded-full bg-white/5" />
           <div className="relative px-6 sm:px-8 py-6 sm:py-7 flex flex-col gap-5">

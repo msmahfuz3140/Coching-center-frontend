@@ -43,7 +43,7 @@ export async function GET(request: Request) {
       where,
       include: {
         instructor: {
-          select: { id: true, name: true, email: true }
+          select: { id: true, name: true, email: true, phone: true }
         },
         syllabus: {
           orderBy: { orderIndex: 'asc' }

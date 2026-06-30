@@ -16,7 +16,7 @@ interface Course {
   category: string
   semester?: number
   duration?: string
-  instructor: { id: string; name?: string; email: string }
+  instructor: { id: string; name?: string; email: string; phone?: string }
   isPublished: boolean
   syllabus?: any[]
   videos?: Video[]
@@ -50,6 +50,7 @@ export default function CourseDetailsPage() {
   const [requesting, setRequesting] = useState(false)
   const [hasAccess, setHasAccess] = useState(false)
   const [currentVideo, setCurrentVideo] = useState<Video | null>(null)
+  const [isEnrollModalOpen, setIsEnrollModalOpen] = useState(false)
 
   const loadCourseAndSession = async () => {
     try {
@@ -102,11 +103,20 @@ export default function CourseDetailsPage() {
       })
       if (!res.ok) throw new Error((await res.json()).error || 'Failed')
       toast.success('Enrollment request sent! Admin will review')
+      setIsEnrollModalOpen(false)
     } catch (error: any) {
       toast.error(error.message || 'Failed')
     } finally {
       setRequesting(false)
     }
+  }
+
+  const handleEnrollClick = () => {
+    if (!session) {
+      toast.error('Please login to enroll')
+      return
+    }
+    setIsEnrollModalOpen(true)
   }
 
   const getLabel = (cat: string) => CATEGORIES.find(c => c.id === cat)?.label || cat
@@ -170,7 +180,7 @@ export default function CourseDetailsPage() {
 
             <div className="flex items-center gap-3">
               <button
-                onClick={handleRequestAccess}
+                onClick={handleEnrollClick}
                 disabled={requesting || hasAccess}
                 className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition ${hasAccess
                     ? 'bg-green-100 text-green-700 cursor-default'
@@ -273,6 +283,93 @@ export default function CourseDetailsPage() {
           </div>
         </div>
       </div>
+
+      {/* Enrollment Modal */}
+      {isEnrollModalOpen && course && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/55 backdrop-blur-sm"
+          onMouseDown={e => { if (e.target === e.currentTarget) setIsEnrollModalOpen(false) }}
+        >
+          <div className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="px-6 py-5 flex items-center justify-between" style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #4f46e5 100%)' }}>
+              <div>
+                <h3 className="text-lg font-bold text-white">📚 Request Enrollment</h3>
+                <p className="text-xs text-indigo-200 mt-0.5">{course.title}</p>
+              </div>
+              <button 
+                onClick={() => setIsEnrollModalOpen(false)} 
+                className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-5">
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex gap-3 items-start">
+                <span className="text-xl">ℹ️</span>
+                <p className="text-xs text-blue-800 leading-relaxed font-medium">
+                  To complete your enrollment and get approved, please contact the instructor/teacher below.
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400">Teacher Contact Info</h4>
+                
+                <div className="space-y-3 bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-sm">
+                      👤
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-400 font-medium leading-none mb-0.5">Name</p>
+                      <p className="text-sm font-semibold text-gray-800">{course.instructor?.name || 'Admin/Instructor'}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 border-t border-gray-150 pt-3">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold text-sm">
+                      ✉️
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-400 font-medium leading-none mb-0.5">Email Address</p>
+                      <p className="text-sm font-semibold text-gray-800 truncate max-w-[240px]">{course.instructor?.email || 'support@pecc.com'}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 border-t border-gray-150 pt-3">
+                    <div className="w-8 h-8 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-sm">
+                      📞
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-400 font-medium leading-none mb-0.5">Phone Number</p>
+                      <p className="text-sm font-semibold text-gray-800">{course.instructor?.phone || '01712345678'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/60 flex gap-3">
+              <button 
+                onClick={() => setIsEnrollModalOpen(false)} 
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-gray-700 font-semibold text-sm hover:bg-gray-100 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRequestAccess}
+                disabled={requesting}
+                className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition disabled:opacity-50 shadow-md shadow-blue-500/10"
+              >
+                {requesting ? 'Enrolling...' : 'Confirm Enrollment'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

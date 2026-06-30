@@ -50,7 +50,7 @@ export default function Footer() {
                                 </div>
                                 <div>
                                     <span className="text-lg font-bold bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
-                                        Coaching LMS
+                                        PECC LMS
                                     </span>
                                     <span className="block text-xs text-gray-500">Learn &amp; Grow</span>
                                 </div>

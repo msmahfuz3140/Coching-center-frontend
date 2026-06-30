@@ -29,7 +29,14 @@ const timeline = [
 ]
 
 const team = [
-  { name: 'Mahfuzul Haque', role: 'Founder & Lead Developer', desc: 'Full-stack developer passionate about building tools that make education accessible.', avatar: 'M', color: 'from-blue-500 to-indigo-600' },
+  {
+    name: 'MD MAHFUZUL HAQUE',
+    role: 'Founder & Lead Developer',
+    desc: 'Full-stack developer passionate about building tools that make education accessible.',
+    avatar: 'M',
+    color: 'from-blue-500 to-indigo-600',
+    link: 'https://mdmahfuzulhaque3140.vercel.app',
+  },
   { name: 'Technical Team', role: 'Development & Design', desc: 'A dedicated team building and maintaining the platform with modern technologies.', avatar: 'T', color: 'from-indigo-500 to-purple-600' },
   { name: 'Student Community', role: 'Feedback & Testing', desc: 'Active students who help us improve the platform with real-world feedback.', avatar: 'S', color: 'from-purple-500 to-pink-600' },
 ]
@@ -137,13 +144,30 @@ export default function AboutPage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
             {team.map((t) => (
-              <div key={t.name} className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 sm:p-8 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 text-center group">
-                <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br ${t.color} flex items-center justify-center text-white text-xl sm:text-2xl font-bold mx-auto mb-4 sm:mb-5 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
-                  {t.avatar}
+              <div key={t.name} className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 sm:p-8 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 text-center group flex flex-col justify-between h-full">
+                <div className="flex-1">
+                  <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gradient-to-br ${t.color} flex items-center justify-center text-white text-xl sm:text-2xl font-bold mx-auto mb-4 sm:mb-5 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
+                    {t.avatar}
+                  </div>
+                  <h3 className="text-base sm:text-lg font-bold text-gray-900">{t.name}</h3>
+                  <p className="text-xs sm:text-sm text-blue-600 font-medium mt-1">{t.role}</p>
+                  <p className="text-xs sm:text-sm text-gray-600 mt-2 sm:mt-3 leading-relaxed">{t.desc}</p>
                 </div>
-                <h3 className="text-base sm:text-lg font-bold text-gray-900">{t.name}</h3>
-                <p className="text-xs sm:text-sm text-blue-600 font-medium mt-1">{t.role}</p>
-                <p className="text-xs sm:text-sm text-gray-600 mt-2 sm:mt-3 leading-relaxed">{t.desc}</p>
+                {t.link && (
+                  <div className="mt-5 pt-3 border-t border-gray-100 flex justify-center">
+                    <a
+                      href={t.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl text-xs shadow-md shadow-blue-500/10 hover:shadow-lg hover:shadow-blue-500/20 hover:-translate-y-0.5 transition-all duration-200"
+                    >
+                      <span>Contact</span>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                      </svg>
+                    </a>
+                  </div>
+                )}
               </div>
             ))}
           </div>
