@@ -37,6 +37,11 @@ export default function LoginPage() {
 
       const { data: sessionData } = await authClient.getSession()
 
+      if (sessionData?.user && (sessionData.user as any).isBlocked) {
+        await authClient.signOut()
+        throw new Error('Your account has been blocked by the admin.')
+      }
+
       toast.success('Login successful! Redirecting...', {
         duration: 2000,
         position: 'top-right',

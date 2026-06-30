@@ -11,6 +11,10 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 })
     }
 
+    if ((session.user as any).isBlocked) {
+      return NextResponse.json({ success: false, error: 'Your account has been blocked.' }, { status: 403 })
+    }
+
     const user = session.user as { id: string; role?: string }
 
     // Find all courses the user is enrolled in (approved)

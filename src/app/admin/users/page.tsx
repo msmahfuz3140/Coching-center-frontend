@@ -15,6 +15,7 @@ type UserRow = {
   emailVerified: boolean
   createdAt: string
   isBlocked?: boolean
+  image?: string | null
 }
 
 type CourseRow = {
@@ -230,8 +231,13 @@ export default function AdminUsersPage() {
                   <tr key={user.id} className={`hover:bg-gray-50/60 transition-colors ${isUpdating === user.id ? 'opacity-50' : ''}`}>
                     <td className="px-4 sm:px-6 py-3 sm:py-4">
                       <div className="flex items-center gap-2 sm:gap-3">
-                        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-bold text-xs sm:text-sm flex-shrink-0 shadow-sm">
-                          {user.name?.charAt(0)?.toUpperCase() || 'U'}
+                        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-bold text-xs sm:text-sm flex-shrink-0 shadow-sm overflow-hidden">
+                          {user.image ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={user.image} alt={user.name || 'User'} className="w-full h-full object-cover" />
+                          ) : (
+                            user.name?.charAt(0)?.toUpperCase() || 'U'
+                          )}
                         </div>
                         <span className="font-semibold text-gray-900 text-xs sm:text-sm truncate">{user.name || 'Unnamed'}</span>
                       </div>

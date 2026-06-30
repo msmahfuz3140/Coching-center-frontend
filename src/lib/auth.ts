@@ -17,6 +17,17 @@ export const auth = betterAuth({
         defaultValue: "STUDENT",
         input: false,
       },
+      isBlocked: {
+        type: "boolean",
+        required: false,
+        defaultValue: false,
+        input: false,
+      },
+      phone: {
+        type: "string",
+        required: false,
+        input: true,
+      },
     },
   },
   emailAndPassword: {
@@ -34,8 +45,7 @@ export const auth = betterAuth({
     expiresIn: 7 * 24 * 60 * 60, // 7 days
     updateAge: 24 * 60 * 60, // 1 day
     cookieCache: {
-      enabled: true,
-      maxAge: 5 * 60 * 60, // 5 hours
+      enabled: false,
     },
   },
   plugins: [

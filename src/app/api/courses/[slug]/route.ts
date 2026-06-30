@@ -13,6 +13,10 @@ export async function GET(
       headers: request.headers
     })
 
+    if (session?.user && (session.user as any).isBlocked) {
+      return NextResponse.json({ error: 'Your account has been blocked.' }, { status: 403 })
+    }
+
     const course = await prisma.course.findUnique({
       where: { slug: params.slug },
       include: {

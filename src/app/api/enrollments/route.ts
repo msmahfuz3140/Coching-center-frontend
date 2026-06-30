@@ -28,6 +28,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized - Please login first' }, { status: 401 })
     }
 
+    if ((session.user as any).isBlocked) {
+      return NextResponse.json({ error: 'Your account has been blocked.' }, { status: 403 })
+    }
+
     const body = await request.json()
     const { courseId, requestMessage } = body
 
@@ -126,6 +130,10 @@ export async function GET(request: Request) {
     
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    if ((session.user as any).isBlocked) {
+      return NextResponse.json({ error: 'Your account has been blocked.' }, { status: 403 })
     }
 
     const { searchParams } = new URL(request.url)

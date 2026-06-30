@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { authClient } from '@/lib/auth-client'
 import NotificationBell from '@/components/NotificationBell'
+import toast from 'react-hot-toast'
 
 export default function DashboardTopBar() {
   const [session, setSession] = useState<any>(null)
@@ -13,6 +14,13 @@ export default function DashboardTopBar() {
   const loadSession = async () => {
     try {
       const { data } = await authClient.getSession()
+      if (data?.user && (data.user as any).isBlocked) {
+        await authClient.signOut()
+        toast.error('Your account has been blocked by the admin.')
+        router.push('/login')
+        router.refresh()
+        return
+      }
       setSession(data)
     } catch (error) {
       console.error('Failed to load session', error)

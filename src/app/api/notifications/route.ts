@@ -10,6 +10,10 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    if ((session.user as any).isBlocked) {
+      return NextResponse.json({ error: 'Your account has been blocked.' }, { status: 403 })
+    }
+
     const { searchParams } = new URL(request.url)
     const limit = parseInt(searchParams.get('limit') || '20')
 
@@ -39,6 +43,10 @@ export async function PATCH(request: Request) {
     const session = await auth.api.getSession({ headers: request.headers })
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    if ((session.user as any).isBlocked) {
+      return NextResponse.json({ error: 'Your account has been blocked.' }, { status: 403 })
     }
 
     const body = await request.json()
