@@ -324,7 +324,7 @@ export default function CourseDetailsPage() {
                     </div>
                     <div>
                       <p className="text-[10px] text-gray-400 font-medium leading-none mb-0.5">Name</p>
-                      <p className="text-sm font-semibold text-gray-800">{course.instructor?.name || 'Admin/Instructor'}</p>
+                      <p className="text-sm font-semibold text-gray-800">{course.instructor?.name || 'MD MASUM AHMED'}</p>
                     </div>
                   </div>
 
@@ -334,7 +334,7 @@ export default function CourseDetailsPage() {
                     </div>
                     <div>
                       <p className="text-[10px] text-gray-400 font-medium leading-none mb-0.5">Email Address</p>
-                      <p className="text-sm font-semibold text-gray-800 truncate max-w-[240px]">{course.instructor?.email || 'support@pecc.com'}</p>
+                      <p className="text-sm font-semibold text-gray-800 truncate max-w-[240px]">{course.instructor?.email || 'polytechniceducationcc@gmail.com'}</p>
                     </div>
                   </div>
 
@@ -344,7 +344,7 @@ export default function CourseDetailsPage() {
                     </div>
                     <div>
                       <p className="text-[10px] text-gray-400 font-medium leading-none mb-0.5">Phone Number</p>
-                      <p className="text-sm font-semibold text-gray-800">{course.instructor?.phone || '01712345678'}</p>
+                      <p className="text-sm font-semibold text-gray-800">{course.instructor?.phone || '01401431745'}</p>
                     </div>
                   </div>
                 </div>

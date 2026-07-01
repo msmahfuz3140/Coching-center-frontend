@@ -123,8 +123,8 @@ export default function Footer() {
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-500 mb-0.5">Email</p>
-                                        <a href="mailto:support@polytechnic-coaching.com" className="text-sm text-gray-300 hover:text-blue-400 transition-colors duration-200">
-                                            support@polytechnic-coaching.com
+                                        <a href="mailto:polytechniceducationcc@gmail.com" className="text-sm text-gray-300 hover:text-blue-400 transition-colors duration-200">
+                                            polytechniceducationcc@gmail.com
                                         </a>
                                     </div>
                                 </li>
@@ -136,8 +136,8 @@ export default function Footer() {
                                     </div>
                                     <div>
                                         <p className="text-xs text-gray-500 mb-0.5">Phone</p>
-                                        <a href="tel:+8801XXXXXXXXX" className="text-sm text-gray-300 hover:text-green-400 transition-colors duration-200">
-                                            +880 1XXXXXXXXX
+                                        <a href="tel:+8801401431745" className="text-sm text-gray-300 hover:text-green-400 transition-colors duration-200">
+                                            +880 1401-431745
                                         </a>
                                     </div>
                                 </li>
@@ -151,7 +151,7 @@ export default function Footer() {
                                     <div>
                                         <p className="text-xs text-gray-500 mb-0.5">Location</p>
                                         <p className="text-sm text-gray-300">
-                                            Dhaka, Bangladesh
+                                            Mymensingh Sadar, Bangladesh
                                         </p>
                                     </div>
                                 </li>

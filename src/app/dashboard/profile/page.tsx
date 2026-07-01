@@ -71,8 +71,8 @@ export default function ProfilePage() {
       formData.append('file', file)
       const res = await fetch('/api/upload/profile', { method: 'POST', body: formData })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Upload failed')
-      await authClient.updateUser({ image: data.imageUrl })
+      const { error: updateError } = await authClient.updateUser({ image: data.imageUrl })
+      if (updateError) throw new Error(updateError.message || 'Failed to update user profile image')
       setUser((prev) => (prev ? { ...prev, image: data.imageUrl } : prev))
       toast.success('Profile picture updated!')
       router.refresh() // refresh so navbar/sidebar picks up new image
@@ -156,7 +156,8 @@ export default function ProfilePage() {
     }
     setIsSaving(true)
     try {
-      await authClient.updateUser({ name: editName.trim() })
+      const { error: updateError } = await authClient.updateUser({ name: editName.trim() })
+      if (updateError) throw new Error(updateError.message || 'Update failed')
       setUser((prev) => (prev ? { ...prev, name: editName.trim() } : prev))
       setIsEditing(false)
       toast.success('Profile updated successfully!')
@@ -182,18 +183,22 @@ export default function ProfilePage() {
     }
     setIsSavingPassword(true)
     try {
-      await authClient.changePassword({
+      const { error } = await authClient.changePassword({
         currentPassword: oldPassword,
         newPassword: newPassword,
         revokeOtherSessions: false,
       })
+      if (error) {
+        toast.error(error.message || 'Failed to change password. Check your current password.')
+        return
+      }
       toast.success('Password changed successfully!')
       setIsChangingPassword(false)
       setOldPassword('')
       setNewPassword('')
       setConfirmPassword('')
     } catch {
-      toast.error('Failed to change password. Check your current password.')
+      toast.error('An unexpected error occurred. Please try again.')
     } finally {
       setIsSavingPassword(false)
     }
