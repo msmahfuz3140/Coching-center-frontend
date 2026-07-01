@@ -9,7 +9,7 @@ function createOtp() {
 
 export async function POST(request: Request) {
   try {
-    const { name, email, password } = await request.json()
+    const { name, email, password, username } = await request.json()
 
     if (!name || !email || !password) {
       return NextResponse.json(
@@ -19,6 +19,31 @@ export async function POST(request: Request) {
     }
 
     const normalizedEmail = String(email).trim().toLowerCase()
+    
+    let normalizedUsername = null
+    if (username) {
+      normalizedUsername = String(username).trim().toLowerCase()
+      if (!/^[a-zA-Z0-9_]{3,20}$/.test(normalizedUsername)) {
+        return NextResponse.json(
+          { success: false, message: 'Username must be 3-20 characters long and contain only letters, numbers, or underscores.' },
+          { status: 400 }
+        )
+      }
+      
+      const existingUsernameUser = await prisma.user.findFirst({
+        where: {
+          username: normalizedUsername,
+          email: { not: normalizedEmail }
+        }
+      })
+      if (existingUsernameUser) {
+        return NextResponse.json(
+          { success: false, message: 'Username is already taken.' },
+          { status: 409 }
+        )
+      }
+    }
+
     const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } })
 
     const otp = createOtp()
@@ -34,7 +59,10 @@ export async function POST(request: Request) {
 
       await prisma.user.update({
         where: { id: existingUser.id },
-        data: { name: String(name).trim() },
+        data: { 
+          name: String(name).trim(),
+          username: normalizedUsername
+        },
       })
 
       const existingAccount = await prisma.account.findFirst({ where: { userId: existingUser.id, providerId: 'credential' } })
@@ -78,6 +106,7 @@ export async function POST(request: Request) {
       data: {
         name: String(name).trim(),
         email: normalizedEmail,
+        username: normalizedUsername,
         role: 'STUDENT',
         emailVerified: false,
       },

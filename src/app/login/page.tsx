@@ -19,20 +19,42 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      const normalizedIdentifier = identifier.trim().toLowerCase()
-      const email = normalizedIdentifier.includes('@') ? normalizedIdentifier : `${normalizedIdentifier}@coaching.dev`
-
-      if (normalizedIdentifier === 'admin123') {
+      const normalizedIdentifier = identifier.trim()
+      
+      if (normalizedIdentifier.toLowerCase() === 'admin123') {
         await fetch('/api/admin/seed', { method: 'POST' })
       }
 
-      const { error } = await authClient.signIn.email({
-        email,
-        password,
-      })
+      const isEmail = normalizedIdentifier.includes('@')
+      let loginError = null
 
-      if (error) {
-        throw new Error(error.message || 'Failed to login')
+      if (isEmail) {
+        const { error } = await authClient.signIn.email({
+          email: normalizedIdentifier,
+          password,
+        })
+        loginError = error
+      } else {
+        const { error } = await authClient.signIn.username({
+          username: normalizedIdentifier,
+          password,
+        })
+        loginError = error
+
+        if (loginError) {
+          const fallbackEmail = `${normalizedIdentifier.toLowerCase()}@coaching.dev`
+          const retryResult = await authClient.signIn.email({
+            email: fallbackEmail,
+            password,
+          })
+          if (!retryResult.error) {
+            loginError = null
+          }
+        }
+      }
+
+      if (loginError) {
+        throw new Error(loginError.message || 'Failed to login')
       }
 
       const { data: sessionData } = await authClient.getSession()

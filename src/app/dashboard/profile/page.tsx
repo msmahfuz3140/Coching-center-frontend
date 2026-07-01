@@ -10,6 +10,7 @@ type SessionUser = {
   id: string
   name?: string | null
   email?: string
+  username?: string | null
   role?: string
   createdAt?: string | Date
   image?: string | null
@@ -44,6 +45,7 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const [editName, setEditName] = useState('')
+  const [editUsername, setEditUsername] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [enrollmentStats, setEnrollmentStats] = useState<EnrollmentStats>({
     enrolledCount: 0,
@@ -94,6 +96,7 @@ export default function ProfilePage() {
         }
         setUser(data.user as SessionUser)
         setEditName((data.user as SessionUser).name || '')
+        setEditUsername((data.user as SessionUser).username || '')
 
         const role = (data.user as SessionUser).role
         if (role === 'ADMIN') {
@@ -154,15 +157,25 @@ export default function ProfilePage() {
       toast.error('Name cannot be empty')
       return
     }
+    const trimmedUsername = editUsername.trim().toLowerCase()
+    if (trimmedUsername) {
+      if (!/^[a-zA-Z0-9_]{3,20}$/.test(trimmedUsername)) {
+        toast.error('Username must be 3-20 characters long and contain only letters, numbers, or underscores.')
+        return
+      }
+    }
     setIsSaving(true)
     try {
-      const { error: updateError } = await authClient.updateUser({ name: editName.trim() })
+      const { error: updateError } = await authClient.updateUser({
+        name: editName.trim(),
+        username: trimmedUsername || null
+      })
       if (updateError) throw new Error(updateError.message || 'Update failed')
-      setUser((prev) => (prev ? { ...prev, name: editName.trim() } : prev))
+      setUser((prev) => (prev ? { ...prev, name: editName.trim(), username: trimmedUsername || null } : prev))
       setIsEditing(false)
       toast.success('Profile updated successfully!')
-    } catch {
-      toast.error('Failed to update profile. Please try again.')
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update profile. Please try again.')
     } finally {
       setIsSaving(false)
     }
@@ -295,7 +308,9 @@ export default function ProfilePage() {
                   </span>
                 )}
               </div>
-              <p className="mt-1 text-blue-100 text-sm break-all">{user.email}</p>
+              <p className="mt-1 text-blue-100 text-sm break-all">
+                {user.username ? `@${user.username} • ` : ''}{user.email}
+              </p>
               <p className="mt-1 text-blue-200 text-xs">📅 Member since {createdAtLabel}</p>
             </div>
 
@@ -359,6 +374,7 @@ export default function ProfilePage() {
               <div className="divide-y divide-gray-100">
                 {[
                   { label: 'Full Name', value: user.name || '—' },
+                  { label: 'Username', value: user.username ? `@${user.username}` : 'Not set' },
                   { label: 'Email Address', value: user.email || '—' },
                   { label: 'Role', value: isAdmin ? 'Administrator' : 'Student' },
                   { label: 'Email Verified', value: user.emailVerified ? '✅ Yes' : '❌ No' },
@@ -549,7 +565,7 @@ export default function ProfilePage() {
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
               <h3 className="text-lg font-bold text-gray-900">✏️ Edit Profile</h3>
               <button
-                onClick={() => { setIsEditing(false); setEditName(user.name || '') }}
+                onClick={() => { setIsEditing(false); setEditName(user.name || ''); setEditUsername(user.username || '') }}
                 className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-500 transition"
                 type="button"
               >
@@ -568,6 +584,16 @@ export default function ProfilePage() {
                 />
               </div>
               <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Username</label>
+                <input
+                  type="text"
+                  value={editUsername}
+                  onChange={(e) => setEditUsername(e.target.value)}
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="john_doe123"
+                />
+              </div>
+              <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
                 <input
                   type="email"
@@ -580,7 +606,7 @@ export default function ProfilePage() {
             </div>
             <div className="p-6 pt-0 flex gap-3">
               <button
-                onClick={() => { setIsEditing(false); setEditName(user.name || '') }}
+                onClick={() => { setIsEditing(false); setEditName(user.name || ''); setEditUsername(user.username || '') }}
                 type="button"
                 className="flex-1 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition"
               >

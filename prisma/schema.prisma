@@ -35,6 +35,7 @@ enum EnrollmentStatus {
 model User {
   id            String      @id @default(cuid()) @map("_id")
   email         String      @unique
+  username      String?
   name          String?
   emailVerified Boolean     @default(false)
   image         String?

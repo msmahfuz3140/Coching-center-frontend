@@ -2,7 +2,7 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "@/lib/prisma";
 import { nextCookies } from "better-auth/next-js";
-import { emailOTP } from "better-auth/plugins";
+import { emailOTP, username } from "better-auth/plugins";
 import { sendVerificationEmail } from "@/lib/email";
 
 export const auth = betterAuth({
@@ -24,6 +24,11 @@ export const auth = betterAuth({
         input: false,
       },
       phone: {
+        type: "string",
+        required: false,
+        input: true,
+      },
+      username: {
         type: "string",
         required: false,
         input: true,
@@ -57,6 +62,7 @@ export const auth = betterAuth({
       expiresIn: 300, // 5 minutes
       otpLength: 6,
     }),
+    username(),
     nextCookies(),
   ],
 });
