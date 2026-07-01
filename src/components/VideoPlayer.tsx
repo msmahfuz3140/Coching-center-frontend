@@ -20,7 +20,7 @@ export default function VideoPlayer({ video, hasAccess }: VideoPlayerProps) {
   const [isFullscreen, setIsFullscreen] = useState(false)
 
   const videoId = video.youtubeUrl.match(/(?:v=|youtu\.be\/|\/embed\/)([a-zA-Z0-9_-]{11})/)?.[1] || ''
-  const src = `https://www.youtube.com/embed/${videoId}?autoplay=1&controls=1&modestbranding=1&rel=0&showinfo=0&iv_load_policy=3&fs=0&disablekb=1&cc_load_policy=0&playsinline=1`
+  const src = `https://www.youtube.com/embed/${videoId}?autoplay=1&controls=1&modestbranding=1&rel=0&showinfo=0&iv_load_policy=3&fs=1&disablekb=1&cc_load_policy=0&playsinline=1`
 
   useEffect(() => {
     const el = containerRef.current
@@ -32,19 +32,73 @@ export default function VideoPlayer({ video, hasAccess }: VideoPlayerProps) {
         e.preventDefault()
     }
     document.addEventListener('keydown', kd)
-    const fsChange = () => setIsFullscreen(!!document.fullscreenElement)
-    document.addEventListener('fullscreenchange', fsChange)
+    const fsChange = () => {
+      const isFS = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+      )
+      setIsFullscreen(isFS)
+      if (!isFS) {
+        if (window.screen && window.screen.orientation && typeof window.screen.orientation.unlock === 'function') {
+          try {
+            window.screen.orientation.unlock()
+          } catch (err) {
+            console.log('Screen orientation unlock error:', err)
+          }
+        }
+      }
+    }
+    const fsEvents = ['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange']
+    fsEvents.forEach(evt => document.addEventListener(evt, fsChange))
     return () => {
       el.removeEventListener('contextmenu', prevent)
       document.removeEventListener('keydown', kd)
-      document.removeEventListener('fullscreenchange', fsChange)
+      fsEvents.forEach(evt => document.removeEventListener(evt, fsChange))
     }
   }, [])
 
   const toggleFS = async () => {
     if (!containerRef.current) return
-    if (!document.fullscreenElement) await containerRef.current.requestFullscreen()
-    else await document.exitFullscreen()
+    try {
+      const fsElement =
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+
+      if (!fsElement) {
+        const el = containerRef.current
+        if (el.requestFullscreen) {
+          await el.requestFullscreen()
+        } else if ((el as any).webkitRequestFullscreen) {
+          await (el as any).webkitRequestFullscreen()
+        } else if ((el as any).mozRequestFullScreen) {
+          await (el as any).mozRequestFullScreen()
+        } else if ((el as any).msRequestFullscreen) {
+          await (el as any).msRequestFullscreen()
+        }
+
+        if (window.screen && window.screen.orientation && typeof window.screen.orientation.lock === 'function') {
+          await window.screen.orientation.lock('landscape').catch((err) => {
+            console.log('Screen orientation lock error:', err)
+          })
+        }
+      } else {
+        if (document.exitFullscreen) {
+          await document.exitFullscreen()
+        } else if ((document as any).webkitExitFullscreen) {
+          await (document as any).webkitExitFullscreen()
+        } else if ((document as any).mozCancelFullScreen) {
+          await (document as any).mozCancelFullScreen()
+        } else if ((document as any).msExitFullscreen) {
+          await (document as any).msExitFullscreen()
+        }
+      }
+    } catch (error) {
+      console.error('Fullscreen toggle failed:', error)
+    }
   }
 
   return (
@@ -76,7 +130,8 @@ export default function VideoPlayer({ video, hasAccess }: VideoPlayerProps) {
               src={showVideo ? src : `https://www.youtube.com/embed/${videoId}?controls=1&modestbranding=1&rel=0&showinfo=0`}
               title={video.title}
               frameBorder="0"
-              allow="autoplay; encrypted-media"
+              allow="autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+              allowFullScreen
             />
 
             {/* Only show overlay BEFORE play starts */}
@@ -91,25 +146,6 @@ export default function VideoPlayer({ video, hasAccess }: VideoPlayerProps) {
                 </div>
               </div>
             )}
-
-            {/* After play - only block YouTube top-right elements (logo, share, etc) */}
-            {showVideo && (
-              <>
-                {/* Block top-left YouTube logo */}
-                <div className="absolute top-0 left-0 w-[200px] h-[60px] z-10 pointer-events-none bg-gradient-to-r from-black/60 to-transparent" />
-                {/* Block top-right YouTube buttons (share, etc) */}
-                <div className="absolute top-0 right-0 w-[100px] h-[60px] z-10 pointer-events-none bg-gradient-to-l from-black/60 to-transparent" />
-                {/* Block bottom-right "Watch on YouTube" */}
-                <div className="absolute bottom-0 right-0 w-[180px] h-[50px] z-10 pointer-events-none bg-gradient-to-l from-black/60 to-transparent" />
-                {/* Block bottom-left YouTube related/logo */}
-                <div className="absolute bottom-0 left-0 w-[120px] h-[50px] z-10 pointer-events-none bg-gradient-to-r from-black/60 to-transparent" />
-              </>
-            )}
-
-            {/* Anti-screen-capture */}
-            <div className="absolute inset-0 pointer-events-none z-[3]" aria-hidden="true">
-              <div className="w-full h-full" style={{ background: 'repeating-conic-gradient(#000 0.0001%, transparent 0.0002%)', mixBlendMode: 'difference', opacity: 0.999 }} />
-            </div>
           </>
         )}
       </div>
